@@ -1,0 +1,11 @@
+## Interface: 16001
+## Title: Player Notes
+## Notes: Put a note on any player ("cool healer", "ninjalooted axe in ZF") and see it in tooltips, chat and the group finder.
+## Author: quikmn
+## Version: 0.1.0
+## SavedVariables: PlayerNotesDB
+## IconTexture: Interface\Icons\INV_Misc_Note_01
+
+Core.lua
+Editor.lua
+Show.lua
