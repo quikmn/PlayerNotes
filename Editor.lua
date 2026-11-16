@@ -121,7 +121,7 @@ local function Build()
 	box:SetScript("OnEscapePressed", function() f:Hide() end)
 	f.box = box
 
-	f.info = Text(f, 10, C.muted)
+	f.info = Text(f, 11, C.muted)
 	f.info:SetPoint("TOPLEFT", box, "BOTTOMLEFT", 2, -6)
 
 	local save = Button(f, "Save", C.accent, function() f:Save() end)

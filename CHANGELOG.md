@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Note window: the hint line under the box is a size larger, easier to read.
+
 ## v0.1.0 (2026-11-16)
 
 - First version: notes on players from the right-click menu (portraits, unit frames, chat names, friends, guild) or `/note`.
