@@ -6,6 +6,9 @@
 ## SavedVariables: PlayerNotesDB
 ## IconTexture: Interface\Icons\INV_Misc_Note_01
 
+Libs\LibStub\LibStub.lua
+Libs\EverlookUI\EverlookUI.lua
 Core.lua
 Editor.lua
 Show.lua
+Window.lua

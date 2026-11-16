@@ -66,7 +66,7 @@ local addonEnv = setmetatable({}, {
 	__index = _G,
 	__newindex = function(_, k, v) globalWrites[k] = true; _G[k] = v end,
 })
-local OWN_GLOBALS = { PlayerNotesDB = true, SLASH_PLAYERNOTES1 = true, SLASH_PLAYERNOTES2 = true }
+local OWN_GLOBALS = { PlayerNotesDB = true, SLASH_PLAYERNOTES1 = true, SLASH_PLAYERNOTES2 = true, LibStub = true } -- LibStub: embedded library loader
 
 ------------------------------------------------------------------------
 step("load TOC files", function()
@@ -135,8 +135,11 @@ step("slash parsing", function()
 	ns.Set("Known", nil, "already noted")
 	local T = { "Targ", nil }
 	local cases = {
-		{ "", nil, { cmd = "help" } },
-		{ "", T, { cmd = "edit", name = "Targ" } },
+		{ "", nil, { cmd = "window" } },
+		{ "", T, { cmd = "window" } },
+		{ "settings", T, { cmd = "settings" } },
+		{ "set chat off", T, { cmd = "setting", text = "chat off" } },
+		{ "Set cool guy", nil, { cmd = "set", name = "Set", text = "cool guy" } },
 		{ "help", T, { cmd = "help" } },
 		{ "list", nil, { cmd = "list" } },
 		{ "cool healer", T, { cmd = "set", name = "Targ", text = "cool healer" } },
@@ -179,8 +182,9 @@ step("slash end to end", function()
 	SlashCmdList.PLAYERNOTES("cool healer")
 	eq(ns.Get("Targ").text, "cool healer", "note on target")
 	SlashCmdList.PLAYERNOTES("")
-	check(PlayerNotesEditor and PlayerNotesEditor:IsShown(), "editor for target")
-	PlayerNotesEditor:Hide()
+	check(PlayerNotesOptionsWindow and PlayerNotesOptionsWindow:IsShown(), "bare /note opens the notes window")
+	SlashCmdList.PLAYERNOTES("")
+	check(not PlayerNotesOptionsWindow:IsShown(), "bare /note closes it again")
 	MOCK.units.target = nil
 	MOCK.secretsOn = true
 end)
@@ -353,6 +357,143 @@ step("hover hint: who, friends, roster, group finder; secret names skipped", fun
 	MOCK.foci = {}
 	ns.UpdateHover()
 	check(not PlayerNotesHint:IsShown(), "nothing hovered")
+end)
+
+step("options: defaults; a file from before options keeps its notes and gets them", function()
+	local o = PlayerNotesDB.options
+	for _, k in ipairs({ "tooltip", "chat", "menu", "groupJoin", "hover" }) do eq(o[k], true, k) end
+	eq(o.chatLength, 40, "chatLength")
+	eq(ns.COLOR, "|cffffb347", "note colour unchanged by default")
+	local saved = PlayerNotesDB
+	PlayerNotesDB = { version = 1, notes = { ["bob-mockrealm"] = { name = "Bob", realm = "MockRealm", text = "x", date = 1 } } }
+	ns.InitDB()
+	check(PlayerNotesDB.notes["bob-mockrealm"].text == "x", "notes lost")
+	eq(PlayerNotesDB.options.chat, true, "option not filled")
+	eq(PlayerNotesDB.options.chatLength, 40, "chatLength not filled")
+	PlayerNotesDB = { version = 1, notes = {}, options = { chat = false, color = { 0, 1, 0 } } }
+	ns.InitDB()
+	eq(PlayerNotesDB.options.chat, false, "saved option overwritten")
+	eq(ns.COLOR, "|cff00ff00", "saved colour not applied")
+	PlayerNotesDB = saved
+	ns.InitDB()
+	eq(ns.COLOR, "|cffffb347", "colour back")
+end)
+
+step("options switch each place off, from chat with /note set", function()
+	ns.Set("Opty", nil, "watch out for him")
+	MOCK.log = {}
+	SlashCmdList.PLAYERNOTES("set chat off")
+	eq(PlayerNotesDB.options.chat, false, "chat off")
+	check(lastLog():find("off", 1, true), "reply: " .. lastLog())
+	local r = { ns.ChatFilter(nil, "CHAT_MSG_SAY", "hi", "Opty") }
+	check(r[1] == false and r[2] == nil, "chat tag with chat off")
+	SlashCmdList.PLAYERNOTES("set chat on")
+	SlashCmdList.PLAYERNOTES("set chatlength 10")
+	eq(PlayerNotesDB.options.chatLength, 10, "chatlength")
+	local _, m = ns.ChatFilter(nil, "CHAT_MSG_SAY", "hi", "Opty")
+	check(m:find("[watch out...]", 1, true), "short tag: " .. tostring(m))
+	SlashCmdList.PLAYERNOTES("set chatlength 500")
+	eq(PlayerNotesDB.options.chatLength, 10, "out of range accepted")
+	check(lastLog():find("Example: /note set chatlength", 1, true), "range reply: " .. lastLog())
+	SlashCmdList.PLAYERNOTES("set chatlength 40")
+	SlashCmdList.PLAYERNOTES("set tooltip off")
+	local lines = {}
+	GameTooltip.AddLine = function(_, t) lines[#lines + 1] = t end
+	GameTooltip.GetUnit = function() return "Opty", "mouseover" end
+	MOCK.secretsOn = false
+	MOCK.units.mouseover = { name = "Opty" }
+	MOCK.tooltipCalls[Enum.TooltipDataType.Unit](GameTooltip, {})
+	eq(#lines, 0, "tooltip line with tooltip off")
+	SlashCmdList.PLAYERNOTES("set tooltip on")
+	MOCK.tooltipCalls[Enum.TooltipDataType.Unit](GameTooltip, {})
+	eq(#lines, 1, "tooltip back on")
+	MOCK.units.mouseover = nil
+	MOCK.secretsOn = true
+	SlashCmdList.PLAYERNOTES("set menu off")
+	local root = MenuRoot()
+	MOCK.menuTags.MENU_UNIT_FRIEND(nil, root, { name = "Opty-MockRealm" })
+	eq(#root.items, 3, "note line in menu with menu off")
+	eq(root.items[3].text, "Edit note\226\128\166", "edit entry stays")
+	SlashCmdList.PLAYERNOTES("set menu on")
+	SlashCmdList.PLAYERNOTES("set color 00ff00")
+	eq(ns.COLOR, "|cff00ff00", "colour applied")
+	SlashCmdList.PLAYERNOTES("set color ffb347")
+	eq(ns.COLOR, "|cffffb347", "colour back")
+	SlashCmdList.PLAYERNOTES("set hover off")
+	ns.Set("Bob", nil, "cool healer")
+	local function fs(t) return { GetText = function() return t end } end
+	MOCK.foci = { { Name = fs("Bob"), Class = fs("Priest"), Level = fs("60"), Variable = fs("x"), GetParent = function() end } }
+	ns.UpdateHover()
+	check(not (PlayerNotesHint and PlayerNotesHint:IsShown()), "hint with hover off")
+	SlashCmdList.PLAYERNOTES("set hover on")
+	ns.UpdateHover()
+	check(PlayerNotesHint:IsShown(), "hint back with hover on")
+	MOCK.foci = {}
+	ns.UpdateHover()
+	SlashCmdList.PLAYERNOTES("set groupjoin off")
+	eq(PlayerNotesDB.options.groupJoin, false, "groupjoin")
+	SlashCmdList.PLAYERNOTES("set groupjoin on")
+	SlashCmdList.PLAYERNOTES("set chat maybe")
+	check(lastLog():find("Example: /note set chat on", 1, true), "bad value reply: " .. lastLog())
+	MOCK.log = {}
+	SlashCmdList.PLAYERNOTES("settings")
+	check(#MOCK.log >= 8, "settings list")
+	MOCK.log = {}
+	SlashCmdList.PLAYERNOTES("help")
+	check(table.concat(MOCK.log, "\n"):find("/note set", 1, true), "help mentions settings")
+	ns.Delete("Opty")
+end)
+
+step("notes window: list, search, edit, delete, add by name, Escape", function()
+	ns.Set("Alpha", nil, "first note")
+	ns.Set("Beta", "Other", "pipe|here")
+	SlashCmdList.PLAYERNOTES("")
+	local w = PlayerNotesOptionsWindow
+	check(w:IsShown() and w.navButtons and w.navButtons.notes and w.navButtons.options, "window with sidebar")
+	local stack = ns.app.sections.notes.stack
+	local list, search, add
+	for _, x in ipairs(stack.widgets) do if x.rows then list = x end end
+	for _, e in ipairs(stack.entries) do
+		local f = e.frame
+		if f and f.box and not f.button and not search then search = f end
+		if f and f.button then add = f end
+	end
+	check(list and search and add, "notes page pieces")
+	local labels = {}
+	for _, r in ipairs(list.rows) do if r:IsShown() then labels[#labels + 1] = r.title:GetText() end end
+	local all = table.concat(labels, ",")
+	check(all:find("Alpha", 1, true) and all:find("Beta-Other", 1, true), "labels: " .. all)
+	for _, r in ipairs(list.rows) do
+		if r.item and r.item.name == "Beta" then check(r.detail:GetText():find("pipe||here", 1, true), "note text not escaped") end
+	end
+	search.box:SetText("first")
+	search.box:GetScript("OnTextChanged")(search.box, true)
+	local shown = 0
+	for _, r in ipairs(list.rows) do if r:IsShown() then shown = shown + 1 end end
+	eq(shown, 1, "search")
+	eq(list.rows[1].item.name, "Alpha", "search hit")
+	list.rows[1].buttons[1]:GetScript("OnClick")(list.rows[1].buttons[1])
+	check(PlayerNotesEditor:IsShown() and PlayerNotesEditor.title:GetText() == "Note on Alpha", "edit button")
+	PlayerNotesEditor:Hide()
+	local del = list.rows[1].buttons[2]
+	del:GetScript("OnClick")(del)
+	check(ns.Get("Alpha"), "deleted on the first click (needs a confirm)")
+	del:GetScript("OnClick")(del)
+	eq(ns.Get("Alpha"), nil, "delete button")
+	search.box:SetText("")
+	search.box:GetScript("OnTextChanged")(search.box, true)
+	add.box:SetText("Newbie")
+	add.button:GetScript("OnClick")(add.button)
+	check(PlayerNotesEditor:IsShown() and PlayerNotesEditor.title:GetText() == "Note on Newbie", "add by name")
+	PlayerNotesEditor:Hide()
+	add.box:SetText("x1 bad")
+	add.button:GetScript("OnClick")(add.button)
+	check(lastLog():find("not a player name", 1, true), "bad name reply")
+	w:GetScript("OnDragStop")(w)
+	check(type(PlayerNotesDB.window) == "table", "position not saved")
+	w:GetScript("OnKeyDown")(w, "ESCAPE")
+	check(not w:IsShown(), "escape")
+	ns.Delete("Beta", "Other")
 end)
 
 step("no Blizzard globals written, no hooks", function()

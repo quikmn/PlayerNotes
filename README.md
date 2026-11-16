@@ -2,15 +2,16 @@
 
 Put a note on any player for WoW Forever (interface 16001): "cool healer", "ninjalooted axe in ZF", "piece of shit". Anything you like, no limits on what you write.
 
-Written from scratch; no third-party code or libraries.
+Written from scratch. It embeds LibStub (public domain) to load EverlookUI, the settings-window library shared by these addons.
 
 ## Set a note
 - Right-click a player: their portrait or target frame, a party or raid frame, focus, a name in chat, a friend, a guild or community member. Pick **Add note…** (or **Edit note…**).
 - Or type it:
   - `/note <text>` notes your target.
   - `/note Name <text>` or `/note Name-Realm <text>` notes anyone. With a player targeted, write `@Name <text>` or `Name-Realm <text>` to note someone else.
-  - `/note` opens the note window for your target.
-  - `/note Name` shows a note, `/note del Name` deletes it, `/note list` shows them all.
+  - `/note` opens the notes window: all your notes with search, edit and delete, a note by name, or on your target.
+  - `/note Name` shows a note, `/note del Name` deletes it, `/note list` shows them all in chat.
+  - `/note set chat off` (or `tooltip`, `chatlength 60`, `menu`, `groupjoin`, `hover`, `color ffb347`) changes where and how notes show; `/note settings` lists them. The same options are in the window and under Settings > AddOns.
 
 In the note window, Enter saves and Escape closes. Saving an empty note deletes it.
 

@@ -42,7 +42,7 @@ function ns.OnMenu(owner, root, contextData)
 	local name, realm = ns.MenuTarget(contextData)
 	if not name or not ns.Key(name, realm) then return end
 	local e = NoteFor(name, realm)
-	if e and MenuUtil and MenuUtil.CreateTitle and root.Insert then
+	if e and ns.Opt("menu") and MenuUtil and MenuUtil.CreateTitle and root.Insert then
 		-- Right under the player's name at the top of the menu.
 		root:Insert(MenuUtil.CreateTitle(ns.COLOR .. U.Escape(U.Short(e.text, 60)) .. "|r"), 2)
 	end
@@ -63,7 +63,7 @@ end
 -- Unit tooltips (mouseover, unit frames, portraits)
 ------------------------------------------------------------------------
 function ns.OnUnitTooltip(tooltip, data)
-	if not tooltip or not tooltip.GetUnit then return end
+	if not tooltip or not tooltip.GetUnit or not ns.Opt("tooltip") then return end
 	local name, realm
 	local _, unit = tooltip:GetUnit()
 	if not U.Secret(unit) then name, realm = ns.UnitNameParts(unit) end
@@ -94,14 +94,14 @@ ns.CHAT_EVENTS = {
 	"CHAT_MSG_RAID", "CHAT_MSG_RAID_LEADER", "CHAT_MSG_RAID_WARNING", "CHAT_MSG_GUILD", "CHAT_MSG_OFFICER",
 	"CHAT_MSG_CHANNEL", "CHAT_MSG_INSTANCE_CHAT", "CHAT_MSG_INSTANCE_CHAT_LEADER", "CHAT_MSG_EMOTE",
 }
-ns.CHAT_TAG_LEN = 40
+ns.CHAT_TAG_LEN = 40 -- default; the chatLength option overrides it
 
 -- Returning just false leaves the message untouched; secret senders/messages are skipped.
 function ns.ChatFilter(_, _, msg, author, ...)
-	if not U.Plain(msg) or not U.Plain(author) then return false end
+	if not ns.Opt("chat") or not U.Plain(msg) or not U.Plain(author) then return false end
 	local e = NoteFor(author)
 	if not e then return false end
-	return false, ns.COLOR .. "[" .. U.Escape(U.Short(e.text, ns.CHAT_TAG_LEN)) .. "]|r " .. msg, author, ...
+	return false, ns.COLOR .. "[" .. U.Escape(U.Short(e.text, ns.Opt("chatLength") or ns.CHAT_TAG_LEN)) .. "]|r " .. msg, author, ...
 end
 
 local function InitChat()
@@ -125,7 +125,7 @@ function ns.ScanGroup(silent)
 		if key then
 			now[key] = true
 			local e = ns.db.notes[key]
-			if e and not inGroup[key] and seeded and not silent then
+			if e and not inGroup[key] and seeded and not silent and ns.Opt("groupJoin") then
 				ns:Print(ns.Label(e) .. " \226\128\148 " .. ns.COLOR .. U.Escape(e.text) .. "|r")
 			end
 		end
@@ -218,6 +218,7 @@ local function Hint()
 	bg:SetVertexColor(0.05, 0.05, 0.07, 0.94)
 	bg:SetAllPoints()
 	local edge = hint:CreateTexture(nil, "BORDER")
+	hint.edge = edge
 	edge:SetTexture("Interface\\Buttons\\WHITE8X8")
 	edge:SetVertexColor(ns.RGB[1], ns.RGB[2], ns.RGB[3], 1)
 	edge:SetPoint("TOPLEFT")
@@ -230,6 +231,13 @@ local function Hint()
 	hint.text:SetWordWrap(true)
 	hint.text:SetPoint("TOPLEFT", 10, -7)
 	return hint
+end
+
+-- The note colour option changed: the hint follows it.
+function ns.RecolorHint()
+	if not hint then return end
+	hint.edge:SetVertexColor(ns.RGB[1], ns.RGB[2], ns.RGB[3], 1)
+	hint.text:SetTextColor(ns.RGB[1], ns.RGB[2], ns.RGB[3], 1)
 end
 
 -- Lines for the noted players among `names` (strings; anything else is skipped).
@@ -270,7 +278,7 @@ function ns.UpdateHover()
 		focus = GetMouseFocus()
 	end
 	local p, row, names
-	if focus and focus ~= WorldFrame then p, row, names = ns.MatchHover(focus) end
+	if focus and focus ~= WorldFrame and ns.Opt("hover") then p, row, names = ns.MatchHover(focus) end
 	local lines = p and ns.HintLines(names, p.id ~= "lfg") or {}
 	if #lines == 0 then
 		if hint and hint:IsShown() then hint:Hide() end

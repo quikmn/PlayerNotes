@@ -9,9 +9,36 @@ ns.name = ADDON
 local U = {}
 ns.Util = U
 
-ns.COLOR = "|cffffb347"          -- note text colour (light amber)
+ns.COLOR = "|cffffb347"          -- note text colour (light amber); the "Note colour" option changes both
 ns.RGB = { 1, 0.70, 0.28 }
 ns.MAX_LEN = 255
+
+-- Where notes show up (all on by default, as before options existed). Kept in PlayerNotesDB.options.
+ns.OPTION_DEFAULTS = {
+	tooltip = true,      -- last line of unit tooltips
+	chat = true,         -- "[note]" in front of chat messages
+	chatLength = 40,     -- how much of the note the chat tag shows
+	menu = true,         -- the note under the name in right-click menus (Add/Edit note is always there)
+	groupJoin = true,    -- a chat line when a noted player joins your group
+	hover = true,        -- the note box beside group finder, who, friends and guild lists
+	color = { 1, 0.70, 0.28 },
+}
+-- Setting names for "/note set <setting> <value>" (Window.lua defines them; the parser only needs the names).
+ns.SETTING_KEYS = { tooltip = true, chat = true, chatlength = true, menu = true, groupjoin = true, hover = true, color = true }
+
+function ns.Opt(key)
+	local o = ns.db and ns.db.options
+	local v = o and o[key]
+	if v == nil then return ns.OPTION_DEFAULTS[key] end
+	return v
+end
+
+function ns.ApplyColor()
+	local c = ns.Opt("color")
+	ns.RGB = { c[1], c[2], c[3] }
+	ns.COLOR = string.format("|cff%02x%02x%02x", math.floor(c[1] * 255 + 0.5), math.floor(c[2] * 255 + 0.5), math.floor(c[3] * 255 + 0.5))
+	if ns.RecolorHint then ns.RecolorHint() end
+end
 
 -- Secret values (Forever, in combat/instances): comparing, indexing or joining them errors.
 function U.Secret(v)
@@ -164,15 +191,16 @@ end
 -- already has a note, or is the target's own name. Without a target the first
 -- word is always the name.
 function ns.ParseSlash(msg, target)
+	if U.Secret(msg) then return { cmd = "help" } end
 	msg = U.Trim(U.Plain(msg) or "")
-	if msg == "" then
-		if target then return { cmd = "edit", name = target[1], realm = target[2] } end
-		return { cmd = "help" }
-	end
+	if msg == "" then return { cmd = "window" } end
 	local first, rest = msg:match("^(%S+)%s*(.*)$")
 	local word = first:lower()
 	if rest == "" and (word == "help" or word == "?") then return { cmd = "help" } end
 	if rest == "" and word == "list" then return { cmd = "list" } end
+	if rest == "" and word == "settings" then return { cmd = "settings" } end
+	-- "/note set <setting> <value>": only when the next word is a setting, so "/note Set <text>" still notes a player called Set
+	if word == "set" and ns.SETTING_KEYS[(rest:match("^(%S+)") or ""):lower()] then return { cmd = "setting", text = rest } end
 	if word == "del" or word == "delete" or word == "remove" then
 		if rest == "" then
 			if target then return { cmd = "del", name = target[1], realm = target[2] } end
@@ -196,10 +224,12 @@ function ns.ParseSlash(msg, target)
 end
 
 local HELP = {
+	"/note - the notes window: every note, search, options",
 	"/note <text> - note on your target",
 	"/note Name <text> (or Name-Realm) - note on anyone",
 	"/note Name - show a note,  /note del Name - delete it",
-	"/note list - all notes,  /note - edit your target's note",
+	"/note list - all notes in chat",
+	"/note set <setting> <value> - change a setting, e.g. /note set chat off (/note settings lists them)",
 	"Or right-click a player (portrait, party/raid frame, name in chat) > Add note.",
 }
 
@@ -207,6 +237,12 @@ function ns.RunSlash(msg)
 	local p = ns.ParseSlash(msg, TargetParts())
 	if p.cmd == "help" then
 		for _, line in ipairs(HELP) do ns:Print(line) end
+	elseif p.cmd == "window" then
+		ns.app:Toggle()
+	elseif p.cmd == "settings" then
+		ns.app:PrintSettings()
+	elseif p.cmd == "setting" then
+		ns.app:TrySetting(p.text)
 	elseif p.cmd == "list" then
 		local rows = {}
 		for _, e in pairs(Notes()) do rows[#rows + 1] = e end
@@ -246,14 +282,25 @@ SlashCmdList.PLAYERNOTES = function(msg) ns.RunSlash(msg) end
 ------------------------------------------------------------------------
 -- Boot
 ------------------------------------------------------------------------
+-- Saved data: notes kept as they are; options missing from older files get their defaults.
+function ns.InitDB()
+	PlayerNotesDB = type(PlayerNotesDB) == "table" and PlayerNotesDB or {}
+	PlayerNotesDB.version = PlayerNotesDB.version or 1
+	PlayerNotesDB.notes = PlayerNotesDB.notes or {}
+	PlayerNotesDB.options = PlayerNotesDB.options or {}
+	for k, v in pairs(ns.OPTION_DEFAULTS) do
+		if PlayerNotesDB.options[k] == nil then PlayerNotesDB.options[k] = type(v) == "table" and { v[1], v[2], v[3] } or v end
+	end
+	ns.db = PlayerNotesDB
+	ns.ApplyColor()
+	return PlayerNotesDB
+end
+
 local boot = CreateFrame("Frame")
 boot:RegisterEvent("ADDON_LOADED")
 boot:SetScript("OnEvent", function(self, event, name)
 	if name ~= ADDON then return end
 	self:UnregisterEvent("ADDON_LOADED")
-	PlayerNotesDB = PlayerNotesDB or {}
-	PlayerNotesDB.version = PlayerNotesDB.version or 1
-	PlayerNotesDB.notes = PlayerNotesDB.notes or {}
-	ns.db = PlayerNotesDB
+	ns.InitDB()
 	if ns.Init then ns.Init() end
 end)
