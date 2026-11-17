@@ -1,5 +1,5 @@
 -- Player Notes: where notes show up and where you can set them.
--- Only official extension points: Menu.ModifyMenu, TooltipDataProcessor, chat message
+-- Only official extension points: Menu.ModifyMenu, TooltipDataProcessor (through the shared EverlookTooltip), chat message
 -- filters, events, and our own hint frame next to list rows we only read from.
 -- No Blizzard function is hooked or replaced and no Blizzard frame field is written.
 local ADDON, ns = ...
@@ -62,8 +62,9 @@ end
 ------------------------------------------------------------------------
 -- Unit tooltips (mouseover, unit frames, portraits)
 ------------------------------------------------------------------------
-function ns.OnUnitTooltip(tooltip, data)
-	if not tooltip or not tooltip.GetUnit or not ns.Opt("tooltip") then return end
+-- The note for the player a unit tooltip shows, or nil (NPC, no note, or a secret name).
+function ns.UnitTooltipNote(tooltip, data)
+	if not tooltip or not tooltip.GetUnit or not ns.Opt("tooltip") then return nil end
 	local name, realm
 	local _, unit = tooltip:GetUnit()
 	if not U.Secret(unit) then name, realm = ns.UnitNameParts(unit) end
@@ -74,15 +75,20 @@ function ns.OnUnitTooltip(tooltip, data)
 			if not U.Secret(n) and not U.Secret(r) then name, realm = U.Plain(n), U.Plain(r) end
 		end
 	end
-	local e = name and NoteFor(name, realm)
-	if e then
-		tooltip:AddLine("Note: " .. U.Escape(e.text), ns.RGB[1], ns.RGB[2], ns.RGB[3], true)
-	end
+	return name and NoteFor(name, realm) or nil
+end
+
+-- On the shared EverlookDB tooltip layout (Libs/EverlookUI/EverlookTooltip.lua): "Note" in the label colour, the
+-- note in the note colour, wrapped, last in the block of EverlookDB lines.
+function ns.OnUnitTooltip(t, ctx)
+	local e = ns.UnitTooltipNote(ctx.tooltip, ctx.data)
+	if e then t:Text("Note", U.Escape(e.text), { color = ns.RGB }) end
 end
 
 local function InitTooltips()
-	if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType then
-		TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Unit, ns.OnUnitTooltip)
+	local Tip = LibStub and LibStub("EverlookTooltip-1", true)
+	if Tip then
+		Tip:Register({ id = "PlayerNotes.note", kind = "unit", order = Tip.ORDER.note, add = ns.OnUnitTooltip })
 	end
 end
 

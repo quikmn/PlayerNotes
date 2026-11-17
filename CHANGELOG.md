@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Tooltip lines now share one tidy layout with the other EverlookDB addons: the note sits last in the EverlookDB block after a blank line, as "Note  cool healer" with the label in the shared label colour and the note in your note colour.
 - The settings window has a search box at the top: type to find any setting.
 - Note editor: pressing Enter on an empty box for a player with no note no longer says it deleted a note.
 - Saving a note without changing it keeps the date it was set.

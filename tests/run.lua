@@ -218,10 +218,13 @@ step("unit tooltip line; secret names skipped", function()
 	eq(#lines, 0, "secret unit name must add nothing")
 	MOCK.secretsOn = false
 	MOCK.tooltipCalls[Enum.TooltipDataType.Unit](GameTooltip, {})
-	eq(lines[1], "Note: cool healer", "tooltip line")
+	eq(lines[1], " ", "a blank line before the EverlookDB block")
+	local plain = lines[2] and lines[2]:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
+	eq(plain, "Note  cool healer", "tooltip line on the shared layout")
+	check(lines[2]:find("^|c"), "label coloured")
 	GameTooltip.GetUnit = function() return S("x"), S("mouseover") end
 	MOCK.tooltipCalls[Enum.TooltipDataType.Unit](GameTooltip, { guid = S("Player-1") })
-	eq(#lines, 1, "secret unit token adds nothing")
+	eq(#lines, 2, "secret unit token adds nothing")
 	MOCK.units.mouseover = nil
 	MOCK.secretsOn = true
 end)
@@ -406,7 +409,7 @@ step("options switch each place off, from chat with /note set", function()
 	eq(#lines, 0, "tooltip line with tooltip off")
 	SlashCmdList.PLAYERNOTES("set tooltip on")
 	MOCK.tooltipCalls[Enum.TooltipDataType.Unit](GameTooltip, {})
-	eq(#lines, 1, "tooltip back on")
+	eq(#lines, 2, "tooltip back on (blank line and note)")
 	MOCK.units.mouseover = nil
 	MOCK.secretsOn = true
 	SlashCmdList.PLAYERNOTES("set menu off")
