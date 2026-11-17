@@ -254,7 +254,7 @@ function ns.RunSlash(msg)
 	elseif p.cmd == "edit" then
 		ns.OpenEditor(p.name, p.realm)
 	elseif p.cmd == "bad" then
-		ns:Print("'" .. U.Escape(p.name) .. "' is not a player name.")
+		ns:Print("'" .. U.Escape(p.name) .. "' is not a player name: letters only, like /note Bob great tank or /note Bob-Realm great tank.")
 	else
 		local _, n, r = ns.Key(p.name, p.realm)
 		local label = ns.Label({ name = n, realm = r })

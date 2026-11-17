@@ -81,7 +81,7 @@ local function Build()
 	local f = CreateFrame("Frame", "PlayerNotesEditor", UIParent)
 	f:SetSize(380, 124)
 	f:SetPoint("CENTER", 0, 160)
-	f:SetFrameStrata("DIALOG")
+	f:SetFrameStrata("FULLSCREEN_DIALOG") -- above the notes window (DIALOG), which opens it
 	f:SetToplevel(true)
 	f:SetClampedToScreen(true)
 	f:EnableMouse(true)
@@ -126,7 +126,20 @@ local function Build()
 
 	local save = Button(f, "Save", C.accent, function() f:Save() end)
 	save:SetPoint("BOTTOMRIGHT", -14, 12)
-	local del = Button(f, "Delete", C.danger, function() f:Delete() end)
+	-- two clicks, as in the notes window: the first asks, a second within 4 seconds deletes
+	local del
+	del = Button(f, "Delete", C.danger, function()
+		if not del.armed then
+			del.armed = GetTime()
+			del.label:SetText("Click again")
+			local armedAt = del.armed
+			C_Timer.After(4, function() if del.armed == armedAt then del.armed = nil; del.label:SetText("Delete") end end)
+			return
+		end
+		del.armed = nil
+		del.label:SetText("Delete")
+		f:Delete()
+	end)
 	del:SetPoint("RIGHT", save, "LEFT", -8, 0)
 	f.del = del
 
@@ -139,6 +152,8 @@ local function Build()
 		local e = ns.Get(n, r)
 		self.box:SetText(e and e.text or "")
 		self.info:SetText(e and ("Set " .. ns.Date(e) .. ". Enter saves, Escape closes.") or "Enter saves, Escape closes.")
+		self.del.armed = nil
+		self.del.label:SetText("Delete")
 		self.del:SetShown(e ~= nil)
 		self:Show()
 		self.box:SetFocus()

@@ -496,6 +496,25 @@ step("notes window: list, search, edit, delete, add by name, Escape", function()
 	ns.Delete("Beta", "Other")
 end)
 
+step("editor Delete takes two clicks; a bad name in the window says why", function()
+	ns.Set("Twice", nil, "x")
+	local f = ns.OpenEditor("Twice")
+	f.del:GetScript("OnClick")(f.del)
+	check(ns.Get("Twice") ~= nil and f:IsShown(), "deleted on the first click")
+	eq(f.del.label:GetText(), "Click again", "not asking")
+	f.del:GetScript("OnClick")(f.del)
+	eq(ns.Get("Twice"), nil, "second click didn't delete")
+	check(not f:IsShown(), "editor still open")
+	ns.Set("Twice", nil, "x")
+	ns.OpenEditor("Twice")
+	eq(f.del.label:GetText(), "Delete", "reopened editor still armed")
+	f:Hide()
+	ns.Delete("Twice")
+	MOCK.log = {}
+	ns.RunSlash("B0b hello")
+	check((MOCK.log[#MOCK.log] or ""):find("like /note Bob", 1, true), "no example: " .. tostring(MOCK.log[#MOCK.log]))
+end)
+
 step("no Blizzard globals written, no hooks", function()
 	local bad = {}
 	for k in pairs(globalWrites) do if not OWN_GLOBALS[k] then bad[#bad + 1] = k end end

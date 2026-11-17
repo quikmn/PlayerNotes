@@ -72,21 +72,22 @@ app:Section("notes", "Notes", function(stack)
 		placeholder = "Search names and notes", width = 300,
 		onChange = function(text) search = U.Trim(text or ""); if list then list:Refresh() end end,
 	})
+	-- the button and Enter do the same; a bad name says why, with an example
+	local function addNote(text, box)
+		local name = U.Trim(text or "")
+		if not ns.Key(name) then
+			ns:Print(name == "" and "type a player's name first, like Bob or Bob-Realm."
+				or ("'" .. U.Escape(name) .. "' is not a player name: letters only, like Bob or Bob-Realm."))
+			return
+		end
+		box:SetText("")
+		box:ClearFocus()
+		ns.OpenEditor(name)
+	end
 	UI.Input(stack, {
 		placeholder = "Name or Name-Realm", width = 300,
-		button = { label = "Add / edit note", width = 140, style = "accent", onClick = function(text, box)
-			local name = U.Trim(text or "")
-			if not ns.Key(name) then
-				ns:Print("'" .. U.Escape(name) .. "' is not a player name.")
-				return
-			end
-			box:SetText("")
-			box:ClearFocus()
-			ns.OpenEditor(name)
-		end },
-		onEnter = function(text, box)
-			if ns.Key(U.Trim(text or "")) then box:SetText(""); ns.OpenEditor(U.Trim(text)) end
-		end,
+		button = { label = "Add / edit note", width = 140, style = "accent", onClick = addNote },
+		onEnter = addNote,
 	})
 	UI.ButtonRow(stack, {
 		{ label = "Note on my target", width = 300, onClick = function()
@@ -139,3 +140,8 @@ end)
 
 -- The window follows note changes made anywhere (editor, menus, chat).
 ns.listeners[#ns.listeners + 1] = function() app:Refresh() end
+
+-- "Note on <target>" follows your target while the window is open.
+local events = CreateFrame("Frame")
+events:RegisterEvent("PLAYER_TARGET_CHANGED")
+events:SetScript("OnEvent", function() if app:IsShown() then app:Refresh() end end)
