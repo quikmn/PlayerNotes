@@ -18,9 +18,19 @@ ns.app = app
 app.slash = "/note set"
 
 local function O() return ns.db.options end
+-- more words the window's search finds a setting by
+local KEYWORDS = {
+	tooltip = { "mouseover", "hover" },
+	chat = { "messages", "prefix" },
+	chatLength = { "length", "truncate", "shorten", "characters", "cut" },
+	menu = { "right-click", "context menu", "dropdown" },
+	groupJoin = { "party", "raid", "alert", "joins", "warning" },
+	hover = { "lfg", "group finder", "who list", "friends list", "guild roster" },
+	color = { "colour", "text" },
+}
 local function Opt(key, kind, label, desc, extra)
 	local def = {
-		key = key:lower(), type = kind, label = label, desc = desc,
+		key = key:lower(), type = kind, label = label, desc = desc, keywords = KEYWORDS[key],
 		get = function() return O()[key] end,
 		set = function(v) O()[key] = v end,
 	}

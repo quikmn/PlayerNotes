@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The settings window has a search box at the top: type to find any setting.
 - Note editor: pressing Enter on an empty box for a player with no note no longer says it deleted a note.
 - Saving a note without changing it keeps the date it was set.
 - Notes window: the "N of M match" count follows the search as you type.
