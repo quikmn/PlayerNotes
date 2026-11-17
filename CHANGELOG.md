@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Chat commands now follow one pattern across all EverlookDB addons: `/note help` (or `?`) lists them in the same format as the others; `/note get` and `/note get chat`; `/note status` (how many notes) and `/note version`; `/note search` opens the window's search box. On their own only, so `/note status is unknown` is still a note on your target.
 - Tooltip lines now share one tidy layout with the other EverlookDB addons: the note sits last in the EverlookDB block after a blank line, as "Note  cool healer" with the label in the shared label colour and the note in your note colour.
 - The settings window has a search box at the top: type to find any setting.
 - Note editor: pressing Enter on an empty box for a player with no note no longer says it deleted a note.

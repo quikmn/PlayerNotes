@@ -200,9 +200,14 @@ function ns.ParseSlash(msg, target)
 	local word = first:lower()
 	if rest == "" and (word == "help" or word == "?") then return { cmd = "help" } end
 	if rest == "" and word == "list" then return { cmd = "list" } end
-	if rest == "" and word == "settings" then return { cmd = "settings" } end
-	-- "/note set <setting> <value>": only when the next word is a setting, so "/note Set <text>" still notes a player called Set
+	if rest == "" and (word == "settings" or word == "get") then return { cmd = "settings" } end
+	-- the words every EverlookDB addon knows, on their own (anything longer is a note)
+	if rest == "" and (word == "status" or word == "version" or word == "search" or word == "options" or word == "config") then
+		return { cmd = "verb", text = word }
+	end
+	-- "/note set|get <setting> [value]": only when the next word is a setting, so "/note Set <text>" still notes a player called Set
 	if word == "set" and ns.SETTING_KEYS[(rest:match("^(%S+)") or ""):lower()] then return { cmd = "setting", text = rest } end
+	if word == "get" and ns.SETTING_KEYS[(rest:match("^(%S+)") or ""):lower()] then return { cmd = "verb", text = "get " .. rest } end
 	if word == "del" or word == "delete" or word == "remove" then
 		if rest == "" then
 			if target then return { cmd = "del", name = target[1], realm = target[2] } end
@@ -225,26 +230,18 @@ function ns.ParseSlash(msg, target)
 	return { cmd = "set", name = target[1], realm = target[2], text = msg }
 end
 
-local HELP = {
-	"/note - the notes window: every note, search, options",
-	"/note <text> - note on your target",
-	"/note Name <text> (or Name-Realm) - note on anyone",
-	"/note Name - show a note,  /note del Name - delete it",
-	"/note list - all notes in chat",
-	"/note set <setting> <value> - change a setting, e.g. /note set chat off (/note settings lists them)",
-	"Or right-click a player (portrait, party/raid frame, name in chat) > Add note.",
-}
-
 function ns.RunSlash(msg)
 	local p = ns.ParseSlash(msg, TargetParts())
 	if p.cmd == "help" then
-		for _, line in ipairs(HELP) do ns:Print(line) end
+		ns.app:Help()
+	elseif p.cmd == "verb" then
+		ns.app:HandleSlash(p.text)
 	elseif p.cmd == "window" then
 		ns.app:Toggle()
 	elseif p.cmd == "settings" then
 		ns.app:PrintSettings()
 	elseif p.cmd == "setting" then
-		ns.app:TrySetting(p.text)
+		ns.app:HandleSlash("set " .. p.text)
 	elseif p.cmd == "list" then
 		local rows = {}
 		for _, e in pairs(Notes()) do rows[#rows + 1] = e end
@@ -277,7 +274,7 @@ function ns.RunSlash(msg)
 	return p
 end
 
-SLASH_PLAYERNOTES1 = "/note"
+SLASH_PLAYERNOTES1 = "/note" -- the window's app (Window.lua) lists /playernotes too, in /note help
 SLASH_PLAYERNOTES2 = "/playernotes"
 SlashCmdList.PLAYERNOTES = function(msg) ns.RunSlash(msg) end
 

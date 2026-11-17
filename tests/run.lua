@@ -138,6 +138,13 @@ step("slash parsing", function()
 		{ "", nil, { cmd = "window" } },
 		{ "", T, { cmd = "window" } },
 		{ "settings", T, { cmd = "settings" } },
+		{ "get", T, { cmd = "settings" } },
+		{ "status", T, { cmd = "verb", text = "status" } },
+		{ "version", nil, { cmd = "verb", text = "version" } },
+		{ "search", T, { cmd = "verb", text = "search" } },
+		{ "get chat", T, { cmd = "verb", text = "get chat" } },
+		{ "status is unknown", T, { cmd = "set", name = "Targ", text = "status is unknown" } },
+		{ "get well soon", T, { cmd = "set", name = "Targ", text = "get well soon" } },
 		{ "set chat off", T, { cmd = "setting", text = "chat off" } },
 		{ "Set cool guy", nil, { cmd = "set", name = "Set", text = "cool guy" } },
 		{ "help", T, { cmd = "help" } },
@@ -443,7 +450,17 @@ step("options switch each place off, from chat with /note set", function()
 	check(#MOCK.log >= 8, "settings list")
 	MOCK.log = {}
 	SlashCmdList.PLAYERNOTES("help")
-	check(table.concat(MOCK.log, "\n"):find("/note set", 1, true), "help mentions settings")
+	local help = table.concat(MOCK.log, "\n")
+	check(help:find("/note set <setting> <value>", 1, true) and help:find("/note <text>", 1, true) and help:find("/note list", 1, true)
+		and help:find("/note get [setting]", 1, true) and help:find("Also works as /playernotes", 1, true), "help: " .. help)
+	check(not help:find("/note <setting> <value>", 1, true), "help offers the short form: " .. help)
+	SlashCmdList.PLAYERNOTES("get chat")
+	check(lastLog():find("/note set chat", 1, true), "get: " .. lastLog())
+	MOCK.log = {}
+	SlashCmdList.PLAYERNOTES("status")
+	check(table.concat(MOCK.log, "\n"):find("notes, kept only on this computer", 1, true), "status: " .. table.concat(MOCK.log, " / "))
+	SlashCmdList.PLAYERNOTES("version")
+	check(lastLog():find("Player Notes", 1, true) and lastLog():find("v", 1, true), "version: " .. lastLog())
 	ns.Delete("Opty")
 end)
 

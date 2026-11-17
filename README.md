@@ -11,7 +11,8 @@ Written from scratch. It embeds LibStub (public domain) to load EverlookUI, the 
   - `/note Name <text>` or `/note Name-Realm <text>` notes anyone. With a player targeted, write `@Name <text>` or `Name-Realm <text>` to note someone else.
   - `/note` opens the notes window: all your notes with search, edit and delete, a note by name, or on your target.
   - `/note Name` shows a note, `/note del Name` deletes it, `/note list` shows them all in chat.
-  - `/note set chat off` (or `tooltip`, `chatlength 60`, `menu`, `groupjoin`, `hover`, `color ffb347`) changes where and how notes show; `/note settings` lists them. The same options are in the window and under Settings > AddOns.
+  - `/note set chat off` (or `tooltip`, `chatlength 60`, `menu`, `groupjoin`, `hover`, `color ffb347`) changes where and how notes show; `/note get` lists them (`/note settings` too). The same options are in the window and under Settings > AddOns.
+  - `/note help` (or `?`), `/note status`, `/note version` and `/note search` (the window's search box) work as in every EverlookDB addon. Because `/note <text>` writes a note, these words count as commands only on their own, and settings always take `set` (or `get`). `/playernotes` works as well as `/note`.
 
 In the note window, Enter saves and Escape closes. Saving an empty note deletes it.
 

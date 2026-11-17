@@ -8,14 +8,27 @@ local app = UI:NewApp({
 	name = "Player Notes",
 	addon = ADDON,
 	slash = "/note",
+	aliases = { "/playernotes" },
+	shortSettings = false, -- "/note <text>" notes your target, so settings are "/note set chat off"
+	chatSearch = false,    -- and "/note search <words>" would be a note; "/note search" alone opens the search box
+	windowDesc = "the notes window: every note, search, options",
 	frameName = "PlayerNotes",
 	tagline = "Your own notes on players, shown in tooltips, chat, menus and lists. They never leave this computer.",
 	accent = { 1, 0.70, 0.28 },
 	position = function() return ns.db end,
 })
 ns.app = app
--- Chat replies for settings read "/note set chat off".
-app.slash = "/note set"
+
+-- For /note help (Core.lua's ns.RunSlash reads the words; these lines only list them, in the shared format).
+app:Command("<text>", "<text>", "a note on your target")
+app:Command("<name> <text>", "Name <text>", "a note on anyone (Name-Realm, or @Name with a player targeted)")
+app:Command("<name>", "Name", "show a note;  /note del Name  deletes it")
+app:Command("list", "list", "every note in chat")
+app:StatusLines(function()
+	local n = 0
+	for _ in pairs(ns.db and ns.db.notes or {}) do n = n + 1 end
+	return n .. " notes, kept only on this computer. Or right-click a player > Add note."
+end)
 
 local function O() return ns.db.options end
 -- more words the window's search finds a setting by
