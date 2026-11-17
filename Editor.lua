@@ -162,8 +162,13 @@ local function Build()
 
 	function f:Save()
 		local label = ns.Label({ name = self.n, realm = self.r })
+		local had = ns.Get(self.n, self.r) ~= nil
 		local e = ns.Set(self.n, self.r, self.box:GetText())
-		ns:Print(e and ("Note on " .. label .. ": " .. ns.COLOR .. U.Escape(e.text) .. "|r") or ("Deleted the note on " .. label .. "."))
+		if e then
+			ns:Print("Note on " .. label .. ": " .. ns.COLOR .. U.Escape(e.text) .. "|r")
+		elseif had then
+			ns:Print("Deleted the note on " .. label .. ".")
+		end -- empty and there was no note: nothing happened, nothing to say
 		self:Hide()
 	end
 

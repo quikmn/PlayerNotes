@@ -515,6 +515,41 @@ step("editor Delete takes two clicks; a bad name in the window says why", functi
 	check((MOCK.log[#MOCK.log] or ""):find("like /note Bob", 1, true), "no example: " .. tostring(MOCK.log[#MOCK.log]))
 end)
 
+step("editor: Enter on an empty new note says nothing; the same text keeps its date", function()
+	local f = ns.OpenEditor("Nobody")
+	MOCK.log = {}
+	f.box:SetText("")
+	f.box:GetScript("OnEnterPressed")(f.box)
+	check(not lastLog():find("Deleted", 1, true), "said deleted for a note that never existed: " .. lastLog())
+	ns.Set("Dated", nil, "same")
+	ns.db.notes[ns.Key("Dated")].date = 1000
+	ns.Set("Dated", nil, "same")
+	eq(ns.Get("Dated").date, 1000, "date of an unchanged note")
+	ns.Set("Dated", nil, "changed")
+	check(ns.Get("Dated").date ~= 1000, "date of a changed note")
+	ns.Delete("Dated")
+end)
+
+step("notes window: the count follows the search", function()
+	ns.Set("Gamma", nil, "one")
+	ns.Set("Delta", nil, "two")
+	ns.app:Open("notes")
+	local stack = ns.app.sections.notes.stack
+	local search, stat
+	for _, e in ipairs(stack.entries) do
+		local f = e.frame
+		if f and f.box and not f.button and not search then search = f end
+		if f and f.value then stat = f end
+	end
+	search.box:SetText("gamma")
+	search.box:GetScript("OnTextChanged")(search.box, true)
+	check(stat.value:GetText():find("1 of", 1, true), "count: " .. tostring(stat.value:GetText()))
+	search.box:SetText("")
+	search.box:GetScript("OnTextChanged")(search.box, true)
+	ns.app:Close()
+	ns.Delete("Gamma"); ns.Delete("Delta")
+end)
+
 step("no Blizzard globals written, no hooks", function()
 	local bad = {}
 	for k in pairs(globalWrites) do if not OWN_GLOBALS[k] then bad[#bad + 1] = k end end

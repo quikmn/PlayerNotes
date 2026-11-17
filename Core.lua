@@ -153,7 +153,9 @@ function ns.Set(name, realm, text)
 		ns.Changed()
 		return nil
 	end
-	local entry = { name = n, realm = r, text = text, date = time() }
+	-- saving the same text again keeps the date it was set
+	local old = Notes()[key]
+	local entry = { name = n, realm = r, text = text, date = old and old.text == text and old.date or time() }
 	Notes()[key] = entry
 	ns.Changed()
 	return entry

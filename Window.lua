@@ -30,7 +30,7 @@ end
 
 Opt("tooltip", "bool", "In tooltips", "The note is the last line when you mouse over the player.")
 Opt("chat", "bool", "In chat, in front of their messages", "Say, yell, whispers, party, raid, guild, channels and instance chat.")
-Opt("chatLength", "number", "How much of the note chat shows (letters)", nil,
+Opt("chatLength", "number", "How much of the note chat shows (letters)", "A longer note is cut short with \"...\" in chat; the tooltip and this window show all of it.",
 	{ min = 10, max = 120, step = 5, disabled = function() return not O().chat end })
 Opt("menu", "bool", "Under their name in right-click menus", "Add note / Edit note is always in the menu.")
 Opt("groupJoin", "bool", "A chat line when a noted player joins your group")
@@ -70,7 +70,8 @@ app:Section("notes", "Notes", function(stack)
 	local list
 	UI.Input(stack, {
 		placeholder = "Search names and notes", width = 300,
-		onChange = function(text) search = U.Trim(text or ""); if list then list:Refresh() end end,
+		-- the count line ("2 of 9 match") follows the search too
+		onChange = function(text) search = U.Trim(text or ""); stack:RefreshAll() end,
 	})
 	-- the button and Enter do the same; a bad name says why, with an example
 	local function addNote(text, box)
