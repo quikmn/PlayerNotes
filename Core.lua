@@ -202,7 +202,8 @@ function ns.ParseSlash(msg, target)
 	if rest == "" and word == "list" then return { cmd = "list" } end
 	if rest == "" and (word == "settings" or word == "get") then return { cmd = "settings" } end
 	-- the words every EverlookDB addon knows, on their own (anything longer is a note)
-	if rest == "" and (word == "status" or word == "version" or word == "search" or word == "options" or word == "config") then
+	if rest == "" and (word == "status" or word == "version" or word == "search" or word == "options" or word == "config"
+		or word == "ai" or word == "apply") then
 		return { cmd = "verb", text = word }
 	end
 	-- "/note set|get <setting> [value]": only when the next word is a setting, so "/note Set <text>" still notes a player called Set
