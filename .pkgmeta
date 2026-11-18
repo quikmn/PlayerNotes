@@ -3,3 +3,4 @@ package-as: PlayerNotes
 ignore:
   - README.md
   - tests
+  - .github
