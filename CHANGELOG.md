@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.1.0 (2026-11-19)
 
 - Settings: an AI help button copies a description of every setting for an AI assistant, and `/note apply` runs the commands it gives back.
 - Chat commands now follow one pattern across all EverlookDB addons: `/note help` (or `?`) lists them in the same format as the others; `/note get` and `/note get chat`; `/note status` (how many notes) and `/note version`; `/note search` opens the window's search box. On their own only, so `/note status is unknown` is still a note on your target.
