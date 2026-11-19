@@ -120,24 +120,41 @@ local function InitChat()
 end
 
 ------------------------------------------------------------------------
--- Group: one chat line when a noted player joins
+-- Group: one chat line when noted players join (one line in all, however many)
 ------------------------------------------------------------------------
 local inGroup, seeded = {}, false
 
+-- The line for the noted players who just joined: "Bob — cool healer", or for several
+-- "Noted players joined: Bob (cool healer), Ganker (ninjalooted...)".
+function ns.JoinLine(entries)
+	if #entries == 0 then return nil end
+	if #entries == 1 then
+		local e = entries[1]
+		return ns.Label(e) .. " \226\128\148 " .. ns.COLOR .. U.Escape(e.text) .. "|r"
+	end
+	local parts = {}
+	for _, e in ipairs(entries) do
+		parts[#parts + 1] = ns.Label(e) .. " (" .. ns.COLOR .. U.Escape(U.Short(e.text, 30)) .. "|r)"
+	end
+	return "Noted players joined: " .. table.concat(parts, ", ")
+end
+
 function ns.ScanGroup(silent)
-	local now = {}
+	local now, joined = {}, {}
 	local raid = IsInRaid()
 	local n = raid and GetNumGroupMembers() or GetNumSubgroupMembers()
 	for i = 1, n or 0 do
 		local name, realm = ns.UnitNameParts((raid and "raid" or "party") .. i)
 		local key = name and ns.Key(name, realm)
-		if key then
+		if key and not now[key] then
 			now[key] = true
 			local e = ns.db.notes[key]
-			if e and not inGroup[key] and seeded and not silent and ns.Opt("groupJoin") then
-				ns:Print(ns.Label(e) .. " \226\128\148 " .. ns.COLOR .. U.Escape(e.text) .. "|r")
-			end
+			if e and not inGroup[key] then joined[#joined + 1] = e end
 		end
+	end
+	if seeded and not silent and ns.Opt("groupJoin") and #joined > 0 then
+		table.sort(joined, function(a, b) return ns.Label(a):lower() < ns.Label(b):lower() end)
+		ns:Print(ns.JoinLine(joined))
 	end
 	inGroup = now
 	seeded = true

@@ -160,20 +160,14 @@ local function Build()
 		self.box:HighlightText()
 	end
 
+	-- No chat line: the window closing (and the notes list updating) is the answer.
 	function f:Save()
-		local label = ns.Label({ name = self.n, realm = self.r })
-		local had = ns.Get(self.n, self.r) ~= nil
-		local e = ns.Set(self.n, self.r, self.box:GetText())
-		if e then
-			ns:Print("Note on " .. label .. ": " .. ns.COLOR .. U.Escape(e.text) .. "|r")
-		elseif had then
-			ns:Print("Deleted the note on " .. label .. ".")
-		end -- empty and there was no note: nothing happened, nothing to say
+		ns.Set(self.n, self.r, self.box:GetText())
 		self:Hide()
 	end
 
 	function f:Delete()
-		if ns.Delete(self.n, self.r) then ns:Print("Deleted the note on " .. ns.Label({ name = self.n, realm = self.r }) .. ".") end
+		ns.Delete(self.n, self.r)
 		self:Hide()
 	end
 

@@ -294,16 +294,20 @@ step("editor: Enter saves, Escape closes, Delete deletes", function()
 	check(f:IsShown(), "shown")
 	eq(f.title:GetText(), "Note on Edited-Other", "title")
 	f.box:SetText("great tank")
+	local logged0 = #MOCK.log
 	f.box:GetScript("OnEnterPressed")(f.box)
 	eq(ns.Get("Edited-Other").text, "great tank", "saved")
+	eq(#MOCK.log, logged0, "chat line on save")
 	check(not f:IsShown(), "closed after save")
 	ns.OpenEditor("Edited", "Other")
 	eq(f.box:GetText(), "great tank", "prefilled")
 	f:GetScript("OnKeyDown")(f, "ESCAPE")
 	check(not f:IsShown(), "escape closes")
 	ns.OpenEditor("Edited", "Other")
+	local logged = #MOCK.log
 	f:Delete()
 	eq(ns.Get("Edited-Other"), nil, "deleted")
+	eq(#MOCK.log, logged, "chat lines from the editor")
 	MOCK.combat = true
 	ns.OpenEditor("Edited", "Other")
 	f:GetScript("OnKeyDown")(f, "ESCAPE")
@@ -323,11 +327,23 @@ step("group join prints once per noted newcomer", function()
 	MOCK.Fire("GROUP_ROSTER_UPDATE")
 	eq(#MOCK.log - before, 1, "no repeat")
 	MOCK.SetGroup(1, false); MOCK.Fire("GROUP_ROSTER_UPDATE")
+	-- several noted players at once (joining a raid): one line for all of them
+	ns.Set("Healer", nil, "cool healer")
+	before = #MOCK.log
+	MOCK.SetGroup(4, false)
+	MOCK.units.party1.name, MOCK.units.party2.name, MOCK.units.party3.name = "Healer", "Ganker", "Nobody"
+	MOCK.Fire("GROUP_ROSTER_UPDATE")
+	eq(#MOCK.log - before, 1, "one line for two noted newcomers")
+	check(lastLog():find("Noted players joined", 1, true) and lastLog():find("Ganker", 1, true) and lastLog():find("Healer", 1, true)
+		and not lastLog():find("Nobody", 1, true), "summary line: " .. lastLog())
+	ns.Delete("Healer")
+	MOCK.SetGroup(1, false); MOCK.Fire("GROUP_ROSTER_UPDATE")
+	before = #MOCK.log
 	MOCK.secretsOn = true
 	MOCK.SetGroup(5, true)
 	for i = 2, 5 do MOCK.units["raid" .. i].name = "Ganker" end
 	MOCK.Fire("GROUP_ROSTER_UPDATE") -- secret names: skipped, no error
-	eq(#MOCK.log - before, 1, "secret names skipped")
+	eq(#MOCK.log - before, 0, "secret names skipped")
 	MOCK.SetGroup(1, false); MOCK.Fire("GROUP_ROSTER_UPDATE")
 end)
 

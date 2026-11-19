@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Less chat spam: saving or deleting a note in the editor or the notes window no longer prints a chat line, and when several noted players join your group at once (a raid) you get one line naming them all instead of one line each.
 - Lighter on chat: with no notes yet, chat messages are passed straight through without being checked.
 - Lighter on your game: the note box beside the friends, who, guild and group finder lists only watches the mouse while one of those windows is open, never in the rest of play or in combat.
 

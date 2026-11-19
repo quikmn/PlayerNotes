@@ -139,8 +139,7 @@ app:Section("notes", "Notes", function(stack)
 		buttons = {
 			{ label = "Edit", width = 60, onClick = function(e) ns.OpenEditor(e.name, e.realm) end },
 			{ label = "Delete", width = 70, style = "danger", confirm = true, onClick = function(e)
-				ns.Delete(e.name, e.realm)
-				ns:Print("Deleted the note on " .. ns.Label(e) .. ".")
+				ns.Delete(e.name, e.realm) -- the row leaving the list says it; no chat line
 			end },
 		},
 	})
