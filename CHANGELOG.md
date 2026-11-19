@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Notes window: one box instead of two. Type to search your notes; click "Add / edit note" (or press Enter on a player's name) to add a note on whoever you typed.
 - The note editor remembers where you dragged it, and uses the same colours as the notes window instead of its own orange.
 - A mistyped command like `/note hepl` no longer becomes a note on your target: it asks "Did you mean /note help?" and shows how to make a one-word note if that is what you wanted (`/note @Name hepl`).
 - Less chat spam: saving or deleting a note in the editor or the notes window no longer prints a chat line, and when several noted players join your group at once (a raid) you get one line naming them all instead of one line each.

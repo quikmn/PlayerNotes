@@ -77,6 +77,17 @@ function ns.Filtered(query)
 	return rows
 end
 
+-- Enter in the notes box: add/edit when the text is a player name that is not just a search hit on note text.
+function ns.EnterAdds(text)
+	local name = U.Trim(text or "")
+	local key = ns.Key(name)
+	if not key then return false end
+	for _, e in ipairs(ns.Filtered(name)) do
+		if ns.Key(e.name, e.realm) ~= key then return false end
+	end
+	return true
+end
+
 local function Count()
 	local n = 0
 	for _ in pairs(ns.db and ns.db.notes or {}) do n = n + 1 end
@@ -91,12 +102,8 @@ end
 app:Section("notes", "Notes", function(stack)
 	UI.Header(stack, "Notes", "Your notes on players. Click one to edit it.")
 	local list
-	UI.Input(stack, {
-		placeholder = "Search names and notes", width = 300,
-		-- the count line ("2 of 9 match") follows the search too
-		onChange = function(text) search = U.Trim(text or ""); stack:RefreshAll() end,
-	})
-	-- the button and Enter do the same; a bad name says why, with an example
+	-- One box: typing searches names and notes; the button (or Enter on a player's name) adds or edits that
+	-- player's note. A bad name says why, with an example.
 	local function addNote(text, box)
 		local name = U.Trim(text or "")
 		if not ns.Key(name) then
@@ -106,12 +113,18 @@ app:Section("notes", "Notes", function(stack)
 		end
 		box:SetText("")
 		box:ClearFocus()
+		search = ""
+		stack:RefreshAll()
 		ns.OpenEditor(name)
 	end
 	UI.Input(stack, {
-		placeholder = "Name or Name-Realm", width = 300,
+		placeholder = "Search, or a name to add a note", width = 300,
+		-- the count line ("2 of 9 match") follows the search too
+		onChange = function(text) search = U.Trim(text or ""); stack:RefreshAll() end,
 		button = { label = "Add / edit note", width = 140, style = "accent", onClick = addNote },
-		onEnter = addNote,
+		-- Enter adds a note only when the words are a player's name and no note text matches them (that is a
+		-- search); otherwise it just leaves the box with the search in place
+		onEnter = function(text, box) if ns.EnterAdds(text) then addNote(text, box) end end,
 	})
 	UI.ButtonRow(stack, {
 		{ label = "Note on my target", width = 300, onClick = function()

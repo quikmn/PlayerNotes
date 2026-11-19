@@ -544,12 +544,14 @@ step("notes window: list, search, edit, delete, add by name, Escape", function()
 	local stack = ns.app.sections.notes.stack
 	local list, search, add
 	for _, x in ipairs(stack.widgets) do if x.rows then list = x end end
+	local boxes = 0
 	for _, e in ipairs(stack.entries) do
 		local f = e.frame
-		if f and f.box and not f.button and not search then search = f end
-		if f and f.button then add = f end
+		if f and f.box then boxes = boxes + 1 end
+		if f and f.button then search, add = f, f end
 	end
 	check(list and search and add, "notes page pieces")
+	eq(boxes, 1, "text boxes on the notes page")
 	local labels = {}
 	for _, r in ipairs(list.rows) do if r:IsShown() then labels[#labels + 1] = r.title:GetText() end end
 	local all = table.concat(labels, ",")
@@ -580,6 +582,19 @@ step("notes window: list, search, edit, delete, add by name, Escape", function()
 	add.box:SetText("x1 bad")
 	add.button:GetScript("OnClick")(add.button)
 	check(lastLog():find("not a player name", 1, true), "bad name reply")
+	-- Enter: a name nobody's note text matches opens the editor; a word found in note text stays a search
+	add.box:SetText("Freshguy")
+	add.box:GetScript("OnTextChanged")(add.box, true)
+	add.box:GetScript("OnEnterPressed")(add.box)
+	check(PlayerNotesEditor:IsShown() and PlayerNotesEditor.title:GetText() == "Note on Freshguy", "Enter on a name")
+	PlayerNotesEditor:Hide()
+	add.box:SetText("pipe")
+	add.box:GetScript("OnTextChanged")(add.box, true)
+	add.box:GetScript("OnEnterPressed")(add.box)
+	check(not PlayerNotesEditor:IsShown(), "Enter on a search word opened the editor")
+	eq(add.box:GetText(), "pipe", "search kept")
+	add.box:SetText("")
+	add.box:GetScript("OnTextChanged")(add.box, true)
 	w:GetScript("OnDragStop")(w)
 	check(type(PlayerNotesDB.window) == "table", "position not saved")
 	w:GetScript("OnKeyDown")(w, "ESCAPE")
@@ -649,7 +664,7 @@ step("notes window: the count follows the search", function()
 	local search, stat
 	for _, e in ipairs(stack.entries) do
 		local f = e.frame
-		if f and f.box and not f.button and not search then search = f end
+		if f and f.box and not search then search = f end
 		if f and f.value then stat = f end
 	end
 	search.box:SetText("gamma")
