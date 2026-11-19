@@ -103,7 +103,10 @@ ns.CHAT_EVENTS = {
 ns.CHAT_TAG_LEN = 40 -- default; the chatLength option overrides it
 
 -- Returning just false leaves the message untouched; secret senders/messages are skipped.
+-- No notes at all (or chat tags off): back out before any name work, so chat costs nothing.
 function ns.ChatFilter(_, _, msg, author, ...)
+	local notes = ns.db and ns.db.notes
+	if not notes or next(notes) == nil then return false end
 	if not ns.Opt("chat") or not U.Plain(msg) or not U.Plain(author) then return false end
 	local e = NoteFor(author)
 	if not e then return false end

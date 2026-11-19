@@ -212,6 +212,16 @@ step("chat filter: noted, unnoted and secret senders", function()
 	check(r[1] == false and r[2] == nil, "secret sender untouched")
 	r = { ns.ChatFilter(nil, "CHAT_MSG_PARTY", S("hello"), "Talker-OtherRealm") }
 	check(r[1] == false and r[2] == nil, "secret message untouched")
+	-- with no notes at all, the sender's name is never even looked at
+	local saved = ns.db.notes
+	ns.db.notes = {}
+	local keyCalls, key = 0, ns.Key
+	ns.Key = function(...) keyCalls = keyCalls + 1; return key(...) end
+	r = { ns.ChatFilter(nil, "CHAT_MSG_SAY", "hello", "Talker-OtherRealm") }
+	ns.Key = key
+	ns.db.notes = saved
+	check(r[1] == false and r[2] == nil, "no notes: message untouched")
+	eq(keyCalls, 0, "name work with zero notes")
 	ns.Set("Pipe", nil, "a|cffff0000b")
 	local _, m2 = ns.ChatFilter(nil, "CHAT_MSG_SAY", "hi", "Pipe")
 	check(m2:find("a||cffff0000b", 1, true), "pipes escaped")
