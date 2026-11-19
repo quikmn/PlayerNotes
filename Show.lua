@@ -1,7 +1,7 @@
 -- Player Notes: where notes show up and where you can set them.
 -- Only official extension points: Menu.ModifyMenu, TooltipDataProcessor (through the shared EverlookTooltip), chat message
--- filters, events, and our own hint frame next to list rows we only read from.
--- No Blizzard function is hooked or replaced and no Blizzard frame field is written.
+-- filters, events, OnShow/OnHide script hooks on the social and group finder windows, and our own hint frame next to
+-- list rows we only read from. No Blizzard function is hooked or replaced and no Blizzard frame field is written.
 local ADDON, ns = ...
 local U = ns.Util
 
@@ -312,8 +312,51 @@ function ns.UpdateHover()
 	h:Show()
 end
 
+-- The windows whose lists the hint reads. The mouse is only watched while one of them is open: no OnUpdate the rest
+-- of the time (combat included). Some load on demand, so ones missing at login are picked up as their addon loads.
+ns.HOVER_WINDOWS = {
+	"FriendsFrame", "WhoFrame", "LFGParentFrame", "LFGBrowseFrame", "PVEFrame",
+	"CommunitiesFrame", "GuildFrame", "ClubFinderGuildFinderFrame",
+}
+local watched = {}
+
+function ns.HoverWindowOpen()
+	for _, name in ipairs(ns.HOVER_WINDOWS) do
+		local f = watched[name] and _G[name]
+		if f and f:IsShown() then return true end
+	end
+	return false
+end
+
+-- Start or stop watching the mouse to match the windows.
+function ns.UpdateHoverWatch()
+	local w = ns.hoverWatcher
+	if not w then return end
+	if ns.HoverWindowOpen() then
+		w:Show()
+	else
+		w:Hide()
+		if hint and hint:IsShown() then hint:Hide() end
+		lastFocus, lastSig = nil, nil
+	end
+end
+
+-- Script hooks only (HookScript): Blizzard's own OnShow/OnHide run untouched first.
+function ns.WatchHoverWindows()
+	for _, name in ipairs(ns.HOVER_WINDOWS) do
+		local f = not watched[name] and _G[name]
+		if type(f) == "table" and f.HookScript then
+			watched[name] = true
+			f:HookScript("OnShow", ns.UpdateHoverWatch)
+			f:HookScript("OnHide", ns.UpdateHoverWatch)
+		end
+	end
+	ns.UpdateHoverWatch()
+end
+
 local function InitHover()
 	local watcher = CreateFrame("Frame")
+	watcher:Hide()
 	local elapsed = 0
 	watcher:SetScript("OnUpdate", function(_, dt)
 		elapsed = elapsed + dt
@@ -323,6 +366,7 @@ local function InitHover()
 	end)
 	ns.hoverWatcher = watcher
 	ns.listeners[#ns.listeners + 1] = function() lastSig = nil end
+	ns.WatchHoverWindows()
 end
 
 ------------------------------------------------------------------------
@@ -330,7 +374,9 @@ end
 ------------------------------------------------------------------------
 local events = CreateFrame("Frame")
 events:SetScript("OnEvent", function(_, event)
-	if event == "PLAYER_ENTERING_WORLD" then
+	if event == "ADDON_LOADED" then
+		ns.WatchHoverWindows() -- group finder, guild and community windows load on demand
+	elseif event == "PLAYER_ENTERING_WORLD" then
 		if not seeded then ns.ScanGroup(true) end
 	else
 		ns.ScanGroup()
@@ -344,4 +390,5 @@ function ns.Init()
 	InitHover()
 	events:RegisterEvent("PLAYER_ENTERING_WORLD")
 	events:RegisterEvent("GROUP_ROSTER_UPDATE")
+	events:RegisterEvent("ADDON_LOADED")
 end

@@ -372,6 +372,31 @@ step("hover hint: who, friends, roster, group finder; secret names skipped", fun
 	check(not PlayerNotesHint:IsShown(), "nothing hovered")
 end)
 
+step("hover watch runs only while a social or group finder window is open", function()
+	local w = ns.hoverWatcher
+	check(w and not w:IsShown(), "mouse watched with no list window open")
+	local friends = CreateFrame("Frame", "FriendsFrame")
+	friends:Hide()
+	ns.WatchHoverWindows()
+	check(not w:IsShown(), "watched while the friends window is closed")
+	friends:Show()
+	check(w:IsShown(), "not watching while the friends window is open")
+	friends:Hide()
+	check(not w:IsShown(), "still watching after the friends window closed")
+	-- a window that loads on demand is picked up when its addon loads
+	local communities = CreateFrame("Frame", "CommunitiesFrame")
+	communities:Hide()
+	MOCK.Fire("ADDON_LOADED", "Blizzard_Communities")
+	communities:Show()
+	check(w:IsShown(), "late-loaded guild window not watched")
+	MOCK.combat = true
+	check(w:IsShown(), "combat changes nothing while the window is open")
+	MOCK.combat = false
+	communities:Hide()
+	check(not w:IsShown(), "still watching after the guild window closed")
+	FriendsFrame, CommunitiesFrame = nil, nil
+end)
+
 step("options: defaults; a file from before options keeps its notes and gets them", function()
 	local o = PlayerNotesDB.options
 	for _, k in ipairs({ "tooltip", "chat", "menu", "groupJoin", "hover" }) do eq(o[k], true, k) end

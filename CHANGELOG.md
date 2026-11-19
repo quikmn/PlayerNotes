@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Lighter on your game: the note box beside the friends, who, guild and group finder lists only watches the mouse while one of those windows is open, never in the rest of play or in combat.
+
 ## v0.1.0 (2026-11-19)
 
 - Settings: an AI help button copies a description of every setting for an AI assistant, and `/note apply` runs the commands it gives back.
