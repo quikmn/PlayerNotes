@@ -165,6 +165,14 @@ step("slash parsing", function()
 		{ "delete Bob-Other", T, { cmd = "del", name = "Bob-Other" } },
 		{ "del", T, { cmd = "del", name = "Targ" } },
 		{ "x1 hello", nil, { cmd = "bad", name = "x1" } },
+		{ "hepl", T, { cmd = "typo", text = "hepl" } },
+		{ "lsit", T, { cmd = "typo", text = "lsit" } },
+		{ "setings", nil, { cmd = "typo", text = "setings" } },
+		{ "hepl me out", T, { cmd = "set", name = "Targ", text = "hepl me out" } },
+		{ "@hepl", T, { cmd = "show", name = "hepl" } },
+		{ "noob", T, { cmd = "set", name = "Targ", text = "noob" } },
+		{ "great", T, { cmd = "set", name = "Targ", text = "great" } },
+		{ "bad", T, { cmd = "set", name = "Targ", text = "bad" } },
 	}
 	for _, c in ipairs(cases) do
 		local p = ns.ParseSlash(c[1], c[2])
@@ -174,6 +182,12 @@ step("slash parsing", function()
 		end
 	end
 	eq(ns.ParseSlash(S("x"), nil).cmd, "help", "secret input")
+	eq(ns.ParseSlash("hepl", T).near, "help", "typo suggestion")
+	-- a player with a note called Lisa is no slip of "list"
+	ns.Set("Lisa", nil, "friend")
+	eq(ns.ParseSlash("lisa", T).cmd, "show", "noted name that looks like a command")
+	ns.Delete("Lisa")
+	eq(ns.ParseSlash("Targ", { "Targ" }).cmd, "show", "target's own name")
 end)
 
 step("slash end to end", function()
@@ -191,6 +205,9 @@ step("slash end to end", function()
 	MOCK.units.target = { name = "Targ" }
 	SlashCmdList.PLAYERNOTES("cool healer")
 	eq(ns.Get("Targ").text, "cool healer", "note on target")
+	SlashCmdList.PLAYERNOTES("hepl")
+	eq(ns.Get("Targ").text, "cool healer", "a typo became a note")
+	check(lastLog():find("Did you mean /note help?", 1, true) and lastLog():find("/note @Targ hepl", 1, true), "typo reply: " .. lastLog())
 	SlashCmdList.PLAYERNOTES("")
 	check(PlayerNotesOptionsWindow and PlayerNotesOptionsWindow:IsShown(), "bare /note opens the notes window")
 	SlashCmdList.PLAYERNOTES("")

@@ -187,6 +187,25 @@ local function TargetParts()
 	if n then return { n, r } end
 end
 
+-- Command words a one-word "/note <word>" may be a slip of (four letters or more: short words are too often real notes).
+ns.TYPO_WORDS = { "help", "list", "settings", "status", "version", "search", "options", "config", "apply", "delete", "remove" }
+
+-- The command `word` is one slip away from ("hepl" -> "help"; two slips for long words), or nil.
+function ns.NearCommand(word)
+	word = (word or ""):lower()
+	if #word < 4 then return nil end
+	local UI = LibStub and LibStub("EverlookUI-1", true)
+	local dist = UI and UI.Search and UI.Search.Distance
+	if not dist then return nil end
+	local limit = #word >= 8 and 2 or 1
+	local best, bestD
+	for _, w in ipairs(ns.TYPO_WORDS) do
+		local d = dist(word, w)
+		if d > 0 and d <= limit and (not bestD or d < bestD) then best, bestD = w, d end
+	end
+	return best
+end
+
 -- Pure parser (tested offline). target = { name, realm } or nil.
 -- With a player targeted, "/note <text>" notes the target; the first word is
 -- taken as a name only when it has a realm ("Bob-Realm"), starts with "@",
@@ -215,6 +234,14 @@ function ns.ParseSlash(msg, target)
 			return { cmd = "help" }
 		end
 		if not rest:find("%s") then return { cmd = "del", name = (rest:gsub("^@", "")) } end
+	end
+
+	-- one word that is a slip of a command word ("/note hepl"): ask, rather than note your target or look up "Hepl"
+	if rest == "" and first:sub(1, 1) ~= "@" and not first:find("-", 1, true) then
+		local key = ns.Key(first)
+		local isNamed = key and (Notes()[key] ~= nil or (target and key == ns.Key(target[1], target[2])))
+		local near = not isNamed and ns.NearCommand(word)
+		if near then return { cmd = "typo", text = first, near = near, target = target } end
 	end
 
 	local who = first:gsub("^@", "")
@@ -253,6 +280,16 @@ function ns.RunSlash(msg)
 		end
 	elseif p.cmd == "edit" then
 		ns.OpenEditor(p.name, p.realm)
+	elseif p.cmd == "typo" then
+		local word = U.Escape(p.text)
+		local tail
+		if p.target then
+			local _, n, r = ns.Key(p.target[1], p.target[2])
+			tail = " For a one-word note on your target: /note @" .. ns.Label({ name = n, realm = r }) .. " " .. word
+		else
+			tail = " A note on a player called " .. word .. ": /note " .. word .. " <text>"
+		end
+		ns:Print("|cffef5d5dunknown command '" .. word .. "'.|r Did you mean /note " .. p.near .. "?" .. tail)
 	elseif p.cmd == "bad" then
 		ns:Print("'" .. U.Escape(p.name) .. "' is not a player name: letters only, like /note Bob great tank or /note Bob-Realm great tank.")
 	else
