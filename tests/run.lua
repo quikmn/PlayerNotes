@@ -587,6 +587,26 @@ step("notes window: list, search, edit, delete, add by name, Escape", function()
 	ns.Delete("Beta", "Other")
 end)
 
+step("editor remembers where you dragged it and uses the window's theme colours", function()
+	local f = ns.OpenEditor("Mover")
+	local gp = f.GetPoint
+	f.GetPoint = function() return "TOPLEFT", nil, "TOPLEFT", 120.4, -80.6 end
+	f:GetScript("OnDragStop")(f)
+	f.GetPoint = gp
+	local p = PlayerNotesDB.editor
+	check(type(p) == "table" and p[1] == "TOPLEFT" and p[3] == 120 and p[4] == -81, "editor position not saved")
+	local placed
+	local sp = f.SetPoint
+	f.SetPoint = function(_, a, _, b, x, y) placed = { a, b, x, y } end
+	ns.RestoreEditorPosition(f)
+	f.SetPoint = sp
+	check(placed and placed[1] == "TOPLEFT" and placed[3] == 120 and placed[4] == -81, "editor position not restored")
+	f:Hide()
+	local src = assert(io.open(ROOT .. "/Editor.lua")):read("*a")
+	check(not src:find("0%.600, 0%.200"), "editor still has its own orange accent")
+	check(src:find("ns.app.T", 1, true), "editor not on the theme")
+end)
+
 step("editor Delete takes two clicks; a bad name in the window says why", function()
 	ns.Set("Twice", nil, "x")
 	local f = ns.OpenEditor("Twice")

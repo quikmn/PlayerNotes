@@ -4,16 +4,13 @@
 local ADDON, ns = ...
 local U = ns.Util
 
-local C = {
-	bg      = { 0.071, 0.078, 0.094, 0.97 },
-	surface = { 0.105, 0.114, 0.137, 1 },
-	hi      = { 0.137, 0.149, 0.180, 1 },
-	border  = { 0.180, 0.196, 0.235, 1 },
-	text    = { 0.902, 0.910, 0.933, 1 },
-	muted   = { 0.553, 0.580, 0.639, 1 },
-	accent  = { 1.000, 0.600, 0.200, 1 },
-	danger  = { 0.937, 0.365, 0.365, 1 },
-}
+-- Colours come from the notes window's theme (the shared EverlookUI one), so both windows look the same.
+local C = {}
+local function LoadTheme()
+	local T = (ns.app and ns.app.T) or LibStub("EverlookUI-1").Theme
+	C.bg, C.surface, C.hi, C.border = T.bg, T.surface, T.surfaceHi, T.border
+	C.text, C.muted, C.accent, C.danger = T.text, T.muted, T.accent, T.danger
+end
 local WHITE = "Interface\\Buttons\\WHITE8X8"
 local function rgba(c) return c[1], c[2], c[3], c[4] or 1 end
 
@@ -77,10 +74,29 @@ end
 
 local editor
 
+-- Where you last dragged the editor (PlayerNotesDB.editor = { point, relativePoint, x, y }).
+local function SavePosition(f)
+	if not ns.db then return end
+	local point, _, rel, x, y = f:GetPoint()
+	if point then ns.db.editor = { point, rel or point, math.floor((x or 0) + 0.5), math.floor((y or 0) + 0.5) } end
+end
+
+local function RestorePosition(f)
+	local p = ns.db and ns.db.editor
+	f:ClearAllPoints()
+	if type(p) == "table" and type(p[1]) == "string" then
+		f:SetPoint(p[1], UIParent, p[2] or p[1], tonumber(p[3]) or 0, tonumber(p[4]) or 0)
+	else
+		f:SetPoint("CENTER", 0, 160)
+	end
+end
+ns.RestoreEditorPosition = RestorePosition
+
 local function Build()
+	LoadTheme()
 	local f = CreateFrame("Frame", "PlayerNotesEditor", UIParent)
 	f:SetSize(380, 124)
-	f:SetPoint("CENTER", 0, 160)
+	RestorePosition(f)
 	f:SetFrameStrata("FULLSCREEN_DIALOG") -- above the notes window (DIALOG), which opens it
 	f:SetToplevel(true)
 	f:SetClampedToScreen(true)
@@ -88,10 +104,17 @@ local function Build()
 	f:SetMovable(true)
 	f:RegisterForDrag("LeftButton")
 	f:SetScript("OnDragStart", f.StartMoving)
-	f:SetScript("OnDragStop", f.StopMovingOrSizing)
+	f:SetScript("OnDragStop", function(self)
+		self:StopMovingOrSizing()
+		SavePosition(self)
+	end)
 	f:Hide()
 	Solid(f, "BACKGROUND", C.bg):SetAllPoints()
 	Border(f, C.border)
+	local line = Solid(f, "ARTWORK", C.accent) -- thin accent line along the top, as on the notes window's theme
+	line:SetPoint("TOPLEFT")
+	line:SetPoint("TOPRIGHT")
+	line:SetHeight(2)
 
 	f.title = Text(f, 14, C.text)
 	f.title:SetPoint("TOPLEFT", 14, -12)
