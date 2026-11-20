@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Settings window: switches, buttons and sliders use a softer shade of the accent colour, an on switch has a dark knob so it stands out, and boxes have cleaner rounded edges.
 
 - Notes window: one box instead of two. Type to search your notes; click "Add / edit note" (or press Enter on a player's name) to add a note on whoever you typed.
 - The note editor remembers where you dragged it, and uses the same colours as the notes window instead of its own orange.
