@@ -10,6 +10,7 @@
 Libs\LibStub\LibStub.lua
 Libs\EverlookUI\EverlookUI.lua
 Libs\EverlookUI\EverlookTooltip.lua
+Realm.lua
 Core.lua
 Editor.lua
 Show.lua

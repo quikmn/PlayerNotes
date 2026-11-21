@@ -696,6 +696,46 @@ step("settings search finds options by their words and keywords", function()
 	ns.app:Close()
 end)
 
+step("realm on client build 71037: realm names \"\", realm ID 0; the realm ID from the GUID, notes saved without a realm", function()
+	local norm, name, id = GetNormalizedRealmName, GetRealmName, GetRealmID
+	local db = ns.db
+	local savedNotes, savedNames = db.notes, db.realmNames
+	db.notes, db.realmNames = {}, {}
+	-- while the game still says it, the name is saved for the realm ID
+	eq(ns.OwnRealm(), "MockRealm", "the game's name")
+	eq(db.realmNames[1], "Mock Realm", "name saved for the ID")
+	GetNormalizedRealmName = function() return "" end
+	GetRealmName = function() return "" end
+	GetRealmID = function() return 0 end
+	eq(ns.OwnRealm(), "MockRealm", "the saved name for the GUID's realm ID")
+	-- nothing saved: the ID-only key, never ""
+	db.realmNames = {}
+	eq(ns.OwnRealm(), "realm:1", "ID-only realm")
+	local e = ns.Set("Bob", nil, "good tank")
+	eq(e.realm, "realm:1", "saved by realm ID")
+	check(db.notes["bob-realm:1"], "key by realm ID")
+	eq(ns.Label(e), "Bob", "own realm shows the name only")
+	-- once the name is known for the ID, the note moves to it
+	db.realmNames[1] = "Mock Realm"
+	ns.RepairRealms()
+	check(db.notes["bob-mockrealm"] and not db.notes["bob-realm:1"], "moved to the name")
+	eq(db.notes["bob-mockrealm"].realm, "MockRealm", "realm put right")
+	-- a note saved as "bob-" (realm "", older version): still found for your realm's Bob, counted, moved when changed
+	db.notes = { ["ann-"] = { name = "Ann", realm = "", text = "healer", date = 5 } }
+	eq(ns.RepairRealms(), 1, "counted"); check(db.notes["ann-"], "not moved: its realm can't be told")
+	eq(ns.Get("Ann") and ns.Get("Ann").text, "healer", "found for your own realm")
+	eq(ns.Get("Ann", "Other Realm"), nil, "not found for another realm")
+	local lines = ns.app.statusFn(ns.app)
+	check(type(lines) == "table" and lines[2] and lines[2]:find("without a realm"), "status says so")
+	ns.Set("Ann", nil, "great healer")
+	check(db.notes["ann-mockrealm"] and not db.notes["ann-"], "moved on change")
+	db.notes = { ["ann-"] = { name = "Ann", realm = "", text = "healer", date = 5 } }
+	check(ns.Delete("Ann") and not db.notes["ann-"], "deleted")
+	GetNormalizedRealmName, GetRealmName, GetRealmID = norm, name, id
+	db.notes, db.realmNames = savedNotes, savedNames
+	ns.RepairRealms()
+end)
+
 step("no errors reported", function()
 	check(#MOCK.errors == 0, "errors: " .. table.concat(MOCK.errors, "\n"))
 end)

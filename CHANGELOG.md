@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- Notes on players of your own realm work again after today's WoW Forever client update, which stopped telling addons the realm's name: the realm now comes from your character, and your older notes are found again. Notes saved since the update without a realm still show for players of your realm, get the realm when you change them, and /note status counts them.
+
 ## v0.2.0 (2026-11-20)
 - Settings window: switches, buttons and sliders use a softer shade of the accent colour, an on switch has a dark knob so it stands out, and boxes have cleaner rounded edges.
 

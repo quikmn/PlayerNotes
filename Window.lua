@@ -27,7 +27,12 @@ app:Command("list", "list", "every note in chat")
 app:StatusLines(function()
 	local n = 0
 	for _ in pairs(ns.db and ns.db.notes or {}) do n = n + 1 end
-	return n .. " notes, kept only on this computer. Or right-click a player > Add note."
+	local out = { n .. " notes, kept only on this computer. Or right-click a player > Add note." }
+	if (ns.namelessNotes or 0) > 0 then
+		out[#out + 1] = ns.namelessNotes .. " saved without a realm (the game didn't say it). They show for players of your"
+			.. " own realm, and get the realm when you change them."
+	end
+	return out
 end)
 
 local function O() return ns.db.options end

@@ -75,9 +75,13 @@ end
 ------------------------------------------------------------------------
 -- Names. Notes are keyed "name-realm" in lower case; own realm is filled in.
 ------------------------------------------------------------------------
+-- Your realm, as notes write it (no spaces or hyphens). The game's name; else, since the WoW Forever client update of
+-- 2026-11-21 (build 71037: GetRealmName() and GetNormalizedRealmName() return ""), the name saved for your realm ID
+-- (PlayerNotesDB.realmNames, filled while the game still says it), else the ID-only "realm:6946" (Realm.lua).
 function ns.OwnRealm()
-	local r = GetNormalizedRealmName and GetNormalizedRealmName()
-	if not U.Plain(r) then r = U.Plain(GetRealmName and GetRealmName()) or "" end
+	local r = U.Plain(GetNormalizedRealmName and GetNormalizedRealmName())
+	local key, name = ns.Realm.read(ns.db and ns.db.realmNames)
+	r = r or name or key or ""
 	return (r:gsub("[%s%-]", ""))
 end
 
@@ -131,9 +135,22 @@ end
 ------------------------------------------------------------------------
 local function Notes() return ns.db and ns.db.notes or {} end
 
+-- A note on one of your own realm's players saved while the game said no realm at all has the key "bob-"; it is still
+-- found (it is kept apart from other realms' notes: which realm it is of can't be told), and moves to the full key
+-- when you change or delete it.
+local function Nameless(key, r)
+	if not key or r ~= ns.OwnRealm() then return nil end
+	local k = key:sub(1, #key - #r)
+	return k:sub(-1) == "-" and k or nil
+end
+
 function ns.Get(name, realm)
-	local key = ns.Key(name, realm)
-	return key and Notes()[key] or nil
+	local key, _, r = ns.Key(name, realm)
+	if not key then return nil end
+	local e = Notes()[key]
+	if e then return e end
+	local old = Nameless(key, r)
+	return old and Notes()[old] or nil
 end
 
 function ns.Clean(text)
@@ -148,13 +165,15 @@ function ns.Set(name, realm, text)
 	local key, n, r = ns.Key(name, realm)
 	if not key then return nil end
 	text = ns.Clean(text)
+	local nameless = Nameless(key, r)
+	local old = Notes()[key] or (nameless and Notes()[nameless])
+	if nameless then Notes()[nameless] = nil end
 	if text == "" then
 		Notes()[key] = nil
 		ns.Changed()
 		return nil
 	end
 	-- saving the same text again keeps the date it was set
-	local old = Notes()[key]
 	local entry = { name = n, realm = r, text = text, date = old and old.text == text and old.date or time() }
 	Notes()[key] = entry
 	ns.Changed()
@@ -162,7 +181,9 @@ function ns.Set(name, realm, text)
 end
 
 function ns.Delete(name, realm)
-	local key = ns.Key(name, realm)
+	local key, _, r = ns.Key(name, realm)
+	local nameless = Nameless(key, r)
+	if nameless and Notes()[nameless] then Notes()[nameless] = nil; ns.Changed(); return true end
 	if not key or not Notes()[key] then return false end
 	Notes()[key] = nil
 	ns.Changed()
@@ -328,10 +349,49 @@ function ns.InitDB()
 	for k, v in pairs(ns.OPTION_DEFAULTS) do
 		if PlayerNotesDB.options[k] == nil then PlayerNotesDB.options[k] = type(v) == "table" and { v[1], v[2], v[3] } or v end
 	end
+	if type(PlayerNotesDB.realmNames) ~= "table" then PlayerNotesDB.realmNames = {} end
 	ns.db = PlayerNotesDB
+	ns.RepairRealms()
 	ns.ApplyColor()
 	return PlayerNotesDB
 end
+
+-- Notes saved while the game didn't say the realm: "bob-realm:6946" (this version, by realm ID) move to the realm's name
+-- once it is known for that ID; "bob-" (realm "", older versions on build 71037) can't be told which realm they are of,
+-- so they stay (still found for your own realm's players, see ns.Get) and /note status counts them. Never merged with
+-- a note of another realm. Returns how many "bob-" notes there are.
+function ns.RepairRealms()
+	local db = ns.db
+	if not db then return 0 end
+	local moves, nameless = {}, 0
+	for key, e in pairs(db.notes) do
+		if type(e) == "table" then
+			local id = ns.Realm.keyID(e.realm)
+			local name = id and U.Plain(db.realmNames[id])
+			if name then
+				local r = name:gsub("[%s%-]", "")
+				moves[#moves + 1] = { from = key, to = AsciiLower(e.name .. "-" .. r), realm = r }
+			elseif e.realm == "" or key:sub(-1) == "-" then
+				nameless = nameless + 1
+			end
+		end
+	end
+	for _, m in ipairs(moves) do
+		local e, there = db.notes[m.from], db.notes[m.to]
+		db.notes[m.from] = nil
+		e.realm = m.realm
+		if not there or (e.date or 0) > (there.date or 0) then db.notes[m.to] = e end
+	end
+	ns.namelessNotes = nameless
+	return nameless
+end
+
+-- the realm is known (by GUID at least) once the character is in the world
+local login = CreateFrame("Frame")
+login:RegisterEvent("PLAYER_LOGIN")
+login:SetScript("OnEvent", function()
+	if ns.db then ns.OwnRealm(); ns.RepairRealms() end
+end)
 
 local boot = CreateFrame("Frame")
 boot:RegisterEvent("ADDON_LOADED")
