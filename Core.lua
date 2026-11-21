@@ -346,6 +346,9 @@ function ns.InitDB()
 	PlayerNotesDB.version = PlayerNotesDB.version or 1
 	PlayerNotesDB.notes = PlayerNotesDB.notes or {}
 	PlayerNotesDB.options = PlayerNotesDB.options or {}
+	-- the shared tooltip switch (solid background) as last chosen in any EverlookDB addon
+	local Tip = LibStub and LibStub("EverlookTooltip-1", true)
+	if Tip and Tip.LoadSolid then Tip:LoadSolid(PlayerNotesDB.options) end
 	for k, v in pairs(ns.OPTION_DEFAULTS) do
 		if PlayerNotesDB.options[k] == nil then PlayerNotesDB.options[k] = type(v) == "table" and { v[1], v[2], v[3] } or v end
 	end

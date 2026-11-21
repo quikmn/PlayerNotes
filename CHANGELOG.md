@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- Tooltip: the note line uses the shared EverlookDB tooltip look. New setting "Solid tooltip background" (on by default), shared by every EverlookDB addon.
+
 ## v0.2.1 (2026-11-21)
 - Notes on players of your own realm work again after today's WoW Forever client update, which stopped telling addons the realm's name: the realm now comes from your character, so new notes on them are saved under your realm instead of under no realm. Notes on them from before the update show again once the game says the realm's name again (Player Notes didn't save it before). Notes saved since the update without a realm still show for players of your realm, get the realm when you change them, and /note status counts them.
 

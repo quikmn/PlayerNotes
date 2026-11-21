@@ -63,6 +63,11 @@ Opt("chatLength", "number", "How much of the note chat shows (letters)", "A long
 Opt("menu", "bool", "Under their name in right-click menus", "Add note / Edit note is always in the menu.")
 Opt("groupJoin", "bool", "A chat line when a noted player joins your group")
 Opt("hover", "bool", "Beside the group finder, who, friends and guild lists", "A small note box next to the list's own tooltip.")
+-- the shared EverlookTooltip switch: an opaque tooltip background (saved with the options)
+do
+	local Tip = LibStub("EverlookTooltip-1", true)
+	if Tip and Tip.SolidSetting then Tip:SolidSetting(app, O) end
+end
 Opt("color", "color", "Note colour", nil, {
 	set = function(v) O().color = { v[1], v[2], v[3] } end,
 	after = function() ns.ApplyColor() end,
@@ -166,6 +171,7 @@ end)
 app:Section("options", "Options", function(stack)
 	UI.Header(stack, "Where notes show", "Turn off any place you don't want to see them.")
 	app:Widget(stack, "tooltip")
+	if app:GetSetting("tipsolid") then app:Widget(stack, "tipsolid") end
 	app:Widget(stack, "chat")
 	app:Widget(stack, "chatlength")
 	app:Widget(stack, "menu")
