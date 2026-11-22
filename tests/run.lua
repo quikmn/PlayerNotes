@@ -364,6 +364,29 @@ step("group join prints once per noted newcomer", function()
 	MOCK.SetGroup(1, false); MOCK.Fire("GROUP_ROSTER_UPDATE")
 end)
 
+step("party and raid frames: the note shows when the game hides who the frame is", function()
+	local lines = {}
+	GameTooltip.AddLine = function(_, t) lines[#lines + 1] = t end
+	ns.Set("Healer", nil, "cool healer")
+	MOCK.secretsOn = false
+	MOCK.SetGroup(3, false)
+	MOCK.units.party1.name = "Healer"
+	MOCK.Fire("GROUP_ROSTER_UPDATE")          -- names readable: remembered per unit token
+	MOCK.secretsOn = true                     -- now (in a dungeon) the game hides them
+	GameTooltip.GetUnit = function() return S("x"), S("party1") end
+	local frame = { unit = "party1" }
+	GameTooltip.GetOwner = function() return frame end
+	MOCK.tooltipCalls[Enum.TooltipDataType.Unit](GameTooltip, { guid = S("Player-1") })
+	local found = false
+	for _, l in ipairs(lines) do if tostring(l):find("cool healer", 1, true) then found = true end end
+	check(found, "note on a party frame's tooltip")
+	GameTooltip.GetOwner = nil
+	MOCK.secretsOn = false
+	ns.Delete("Healer")
+	MOCK.SetGroup(1, false); MOCK.Fire("GROUP_ROSTER_UPDATE")
+	MOCK.secretsOn = true
+end)
+
 step("hover hint: who, friends, roster, group finder; secret names skipped", function()
 	local function fs(t) return { GetText = function() return t end } end
 	local function row(fields, parent)

@@ -75,6 +75,24 @@ function ns.UnitTooltipNote(tooltip, data)
 			if not U.Secret(n) and not U.Secret(r) then name, realm = U.Plain(n), U.Plain(r) end
 		end
 	end
+	-- Party and raid frames (Lattice and others): inside instances the game can hide who a frame shows from addon
+	-- code. The frame still says which unit it is (party1, raid7): look that up in the group as last read.
+	if not name then
+		local token = not U.Secret(unit) and U.Plain(unit) or nil
+		if not token and tooltip.GetOwner then
+			local okO, owner = pcall(tooltip.GetOwner, tooltip)
+			if okO and type(owner) == "table" then
+				local u = rawget(owner, "unit")
+				if (u == nil or U.Secret(u)) and owner.GetAttribute then
+					local okA, a = pcall(owner.GetAttribute, owner, "unit")
+					u = okA and a or nil
+				end
+				token = not U.Secret(u) and U.Plain(u) or nil
+			end
+		end
+		local r = token and ns.roster and ns.roster[token]
+		if r then name, realm = r[1], r[2] end
+	end
 	return name and NoteFor(name, realm) or nil
 end
 
@@ -143,8 +161,14 @@ function ns.ScanGroup(silent)
 	local now, joined = {}, {}
 	local raid = IsInRaid()
 	local n = raid and GetNumGroupMembers() or GetNumSubgroupMembers()
+	-- who is behind each unit token, for frames whose tooltip can't say (UnitTooltipNote); names the game hides
+	-- right now keep what was read before
+	local old, roster = ns.roster or {}, {}
+	ns.roster = roster
 	for i = 1, n or 0 do
-		local name, realm = ns.UnitNameParts((raid and "raid" or "party") .. i)
+		local token = (raid and "raid" or "party") .. i
+		local name, realm = ns.UnitNameParts(token)
+		roster[token] = name and { name, realm } or old[token]
 		local key = name and ns.Key(name, realm)
 		if key and not now[key] then
 			now[key] = true
