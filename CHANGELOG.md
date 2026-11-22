@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.3.0 (2026-11-22)
 - Notes now show when you hover a player on party and raid frames, also inside dungeons.
 - Tooltip: the note line matches the other EverlookDB addons. New setting "Solid tooltip background" (on by default).
 
