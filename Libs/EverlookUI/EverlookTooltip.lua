@@ -16,7 +16,8 @@
 --     groups: prices, gear upgrades, crafting, where it comes from, notes; a blank line between two groups;
 --   * t:Line(label, value, opt): label left (light neutral), an optional softer note after it, the value right
 --     (white). opt.tone = "good" | "bad" | "note" colours the value (green, red, the soft note tone); opt.stale = an
---     old value (muted); opt.color = { r, g, b } for the value;
+--     old value (muted); opt.color = { r, g, b } for the value; opt.labelColor = { r, g, b } colours the label too
+--     (the whole line in one colour); opt.scale = 1.07 draws the line that much bigger (EverlookTooltip 4);
 --   * t:Detail(label, value, opt): indented finer print. With Tip:SetDetail("shift") details show only while Shift
 --     is held (default "always"); opt.always = true keeps a detail that its addon gates itself; opt.labelColor;
 --     opt.wrap wraps a detail without a value (a sentence);
@@ -30,7 +31,7 @@
 --
 -- Solid background (Tip:SetSolid, on by default): an opaque layer under the game's own tooltip background, so
 -- nothing shows through. Left alone when a tooltip or UI skin addon (TipTac, ElvUI, ...) is loaded.
-local MAJOR, MINOR = "EverlookTooltip-1", 3
+local MAJOR, MINOR = "EverlookTooltip-1", 4
 local Tip = LibStub:NewLibrary(MAJOR, MINOR)
 if not Tip then return end
 Tip.version = MINOR
@@ -251,7 +252,8 @@ function Tip:Render(rows, shift)
 	for _, row in ipairs(rows) do
 		local kind, label, value, opt = row[1], row[2], row[3], row[4]
 		if kind == "line" then
-			local left = L .. tostring(label or "") .. "|r"
+			local LL = opt.labelColor and hex(opt.labelColor) or L
+			local left = LL .. tostring(label or "") .. "|r"
 			if opt.note and opt.note ~= "" then left = left .. "  " .. N .. opt.note .. "|r" end
 			local c = opt.color or (opt.tone and C[opt.tone]) or (opt.stale and C.stale) or C.value
 			if value ~= nil and value ~= "" then
@@ -261,6 +263,8 @@ function Tip:Render(rows, shift)
 			end
 			-- opt.big (EverlookTooltip 3): drawn in the tooltip's title font, a line nobody can miss
 			if opt.big then out[#out].big = true end
+			-- opt.scale (EverlookTooltip 4): the line's own font, that much bigger
+			if type(opt.scale) == "number" and opt.scale > 0 and opt.scale ~= 1 then out[#out].scale = opt.scale end
 		elseif kind == "detail" then
 			if opt.always or self.settings.detail ~= "shift" or shift then
 				local d = opt.labelColor or C.detail
@@ -417,6 +421,7 @@ function Tip:Draw(tooltip, lines)
 		if l[2] then
 			tooltip:AddDoubleLine(l[1], l[2], l[3], l[4], l[5], l[6], l[7], l[8])
 			if l.big then pcall(self.Enlarge, self, tooltip) end
+			if l.scale then pcall(self.Enlarge, self, tooltip, l.scale) end
 		else
 			local text = l[1]
 			-- a wrapped detail keeps its indent as a gap of the same width (spaces at the start of a wrapped line can go)
@@ -428,19 +433,24 @@ function Tip:Draw(tooltip, lines)
 	end
 end
 
--- The tooltip's last line in its title font. The game reuses its line font strings, so the next time the tooltip is
--- cleared they get their own font back.
-function Tip:Enlarge(tooltip)
+-- The tooltip's last line in its title font, or with scale its own font that much bigger. The game reuses its line
+-- font strings, so the next time the tooltip is cleared they get their own font back.
+function Tip:Enlarge(tooltip, scale)
 	local name = tooltip.GetName and tooltip:GetName()
 	local n = tooltip.NumLines and tooltip:NumLines()
 	local font = _G.GameTooltipHeaderText
-	if not name or not n or not font then return end
+	if not name or not n or (not font and not scale) then return end
 	tooltip.eluiBig = tooltip.eluiBig or {}
 	for _, side in ipairs({ "TextLeft", "TextRight" }) do
 		local fs = _G[name .. side .. n]
 		if fs and fs.SetFontObject then
 			tooltip.eluiBig[#tooltip.eluiBig + 1] = { fs, fs.GetFontObject and fs:GetFontObject() }
-			fs:SetFontObject(font)
+			if scale then
+				local file, size, flags = fs:GetFont()
+				if file and size then fs:SetFont(file, size * scale, flags or "") end
+			else
+				fs:SetFontObject(font)
+			end
 		end
 	end
 	if not tooltip.eluiBigHooked and tooltip.HookScript then
