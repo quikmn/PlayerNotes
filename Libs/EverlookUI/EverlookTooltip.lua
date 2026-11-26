@@ -31,7 +31,7 @@
 --
 -- Solid background (Tip:SetSolid, on by default): an opaque layer under the game's own tooltip background, so
 -- nothing shows through. Left alone when a tooltip or UI skin addon (TipTac, ElvUI, ...) is loaded.
-local MAJOR, MINOR = "EverlookTooltip-1", 4
+local MAJOR, MINOR = "EverlookTooltip-1", 5
 local Tip = LibStub:NewLibrary(MAJOR, MINOR)
 if not Tip then return end
 Tip.version = MINOR
@@ -444,10 +444,22 @@ function Tip:Enlarge(tooltip, scale)
 	for _, side in ipairs({ "TextLeft", "TextRight" }) do
 		local fs = _G[name .. side .. n]
 		if fs and fs.SetFontObject then
-			tooltip.eluiBig[#tooltip.eluiBig + 1] = { fs, fs.GetFontObject and fs:GetFontObject() }
+			-- the line's own font, remembered once per line: a line enlarged again (the tooltip refreshed without
+			-- being cleared) or left enlarged must never grow from its already bigger size (0.36.1: a reused line grew
+			-- 7% on every hover until it filled the screen)
+			local orig = tooltip.eluiOrig and tooltip.eluiOrig[fs]
+			if not orig then
+				local obj = fs.GetFontObject and fs:GetFontObject() or _G.GameTooltipText
+				local file, size, flags
+				if obj and obj.GetFont then file, size, flags = obj:GetFont() end
+				if not file then file, size, flags = fs:GetFont() end
+				orig = { obj = obj, file = file, size = size, flags = flags or "" }
+				tooltip.eluiOrig = tooltip.eluiOrig or {}
+				tooltip.eluiOrig[fs] = orig
+			end
+			tooltip.eluiBig[#tooltip.eluiBig + 1] = fs
 			if scale then
-				local file, size, flags = fs:GetFont()
-				if file and size then fs:SetFont(file, size * scale, flags or "") end
+				if orig.file and orig.size then fs:SetFont(orig.file, orig.size * scale, orig.flags) end
 			else
 				fs:SetFontObject(font)
 			end
@@ -459,8 +471,12 @@ function Tip:Enlarge(tooltip, scale)
 			local list = tt.eluiBig
 			if not list then return end
 			tt.eluiBig = nil
-			for _, e in ipairs(list) do
-				if e[2] then pcall(e[1].SetFontObject, e[1], e[2]) end
+			for _, fs in ipairs(list) do
+				local o = tt.eluiOrig and tt.eluiOrig[fs]
+				if o then
+					if o.obj then pcall(fs.SetFontObject, fs, o.obj) end
+					if o.file and o.size then pcall(fs.SetFont, fs, o.file, o.size, o.flags) end
+				end
 			end
 		end)
 	end
