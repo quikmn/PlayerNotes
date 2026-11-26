@@ -30,7 +30,7 @@
 --
 -- Solid background (Tip:SetSolid, on by default): an opaque layer under the game's own tooltip background, so
 -- nothing shows through. Left alone when a tooltip or UI skin addon (TipTac, ElvUI, ...) is loaded.
-local MAJOR, MINOR = "EverlookTooltip-1", 2
+local MAJOR, MINOR = "EverlookTooltip-1", 3
 local Tip = LibStub:NewLibrary(MAJOR, MINOR)
 if not Tip then return end
 Tip.version = MINOR
@@ -259,6 +259,8 @@ function Tip:Render(rows, shift)
 			else
 				out[#out + 1] = { left, nil, 1, 1, 1 }
 			end
+			-- opt.big (EverlookTooltip 3): drawn in the tooltip's title font, a line nobody can miss
+			if opt.big then out[#out].big = true end
 		elseif kind == "detail" then
 			if opt.always or self.settings.detail ~= "shift" or shift then
 				local d = opt.labelColor or C.detail
@@ -414,6 +416,7 @@ function Tip:Draw(tooltip, lines)
 	for _, l in ipairs(lines) do
 		if l[2] then
 			tooltip:AddDoubleLine(l[1], l[2], l[3], l[4], l[5], l[6], l[7], l[8])
+			if l.big then pcall(self.Enlarge, self, tooltip) end
 		else
 			local text = l[1]
 			-- a wrapped detail keeps its indent as a gap of the same width (spaces at the start of a wrapped line can go)
@@ -422,6 +425,34 @@ function Tip:Draw(tooltip, lines)
 			end
 			tooltip:AddLine(text, l[3], l[4], l[5], l[9] and true or false)
 		end
+	end
+end
+
+-- The tooltip's last line in its title font. The game reuses its line font strings, so the next time the tooltip is
+-- cleared they get their own font back.
+function Tip:Enlarge(tooltip)
+	local name = tooltip.GetName and tooltip:GetName()
+	local n = tooltip.NumLines and tooltip:NumLines()
+	local font = _G.GameTooltipHeaderText
+	if not name or not n or not font then return end
+	tooltip.eluiBig = tooltip.eluiBig or {}
+	for _, side in ipairs({ "TextLeft", "TextRight" }) do
+		local fs = _G[name .. side .. n]
+		if fs and fs.SetFontObject then
+			tooltip.eluiBig[#tooltip.eluiBig + 1] = { fs, fs.GetFontObject and fs:GetFontObject() }
+			fs:SetFontObject(font)
+		end
+	end
+	if not tooltip.eluiBigHooked and tooltip.HookScript then
+		tooltip.eluiBigHooked = true
+		tooltip:HookScript("OnTooltipCleared", function(tt)
+			local list = tt.eluiBig
+			if not list then return end
+			tt.eluiBig = nil
+			for _, e in ipairs(list) do
+				if e[2] then pcall(e[1].SetFontObject, e[1], e[2]) end
+			end
+		end)
 	end
 end
 
