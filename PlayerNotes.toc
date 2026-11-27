@@ -3,7 +3,7 @@
 ## Notes: Put a note on any player ("cool healer", "ninjalooted axe in ZF") and see it in tooltips, chat and the group finder.
 ## Author: quikmn
 ## X-License: GPL-3.0
-## Version: 0.3.0
+## Version: 0.3.1
 ## SavedVariables: PlayerNotesDB
 ## IconTexture: Interface\Icons\INV_Misc_Note_01
 
