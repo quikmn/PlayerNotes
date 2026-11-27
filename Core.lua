@@ -74,6 +74,10 @@ end
 
 ------------------------------------------------------------------------
 -- Names. Notes are keyed "name-realm" in lower case; own realm is filled in.
+-- On WoW Forever (regional unique names) the second part is the character's surname: UnitName's second value and
+-- the "Name-Surname" of chat senders. Name and surname are unique in the whole region, so that key already tells
+-- two Bobs apart. Other players' realms are never read from their GUIDs (Blizzard hides realms on purpose since
+-- build 71037); a player without a surname gets your own realm, as before.
 ------------------------------------------------------------------------
 -- Your realm, as notes write it (no spaces or hyphens). The game's name; else, since the WoW Forever client update of
 -- 2026-11-21 (build 71037: GetRealmName() and GetNormalizedRealmName() return ""), the name saved for your realm ID

@@ -759,6 +759,38 @@ step("realm on client build 71037: realm names \"\", realm ID 0; the realm ID fr
 	ns.RepairRealms()
 end)
 
+step("surnames (regional unique names): same first name, different surname, different notes; nothing read from their GUIDs", function()
+	local norm, name, id, byGUID = GetNormalizedRealmName, GetRealmName, GetRealmID, GetPlayerInfoByGUID
+	local db = ns.db
+	local savedNotes = db.notes
+	db.notes = {}
+	GetNormalizedRealmName = function() return "" end
+	GetRealmName = function() return "" end
+	GetRealmID = function() return 0 end
+	local guidCalls = 0
+	GetPlayerInfoByGUID = function() guidCalls = guidCalls + 1 end
+	MOCK.secretsOn = false
+	MOCK.units.mouseover = { name = "Bob", surname = "Nevermore" }
+	local n, s = ns.UnitNameParts("mouseover")
+	eq(n, "Bob", "first name"); eq(s, "Nevermore", "the surname comes second")
+	ns.Set(n, s, "nice paladin")
+	ns.Set("Bob-Ledjoo", nil, "other Bob") -- a chat sender: Name-Surname
+	check(db.notes["bob-nevermore"] and db.notes["bob-ledjoo"], "two Bobs, two notes")
+	eq(ns.Get("Bob", "Nevermore").text, "nice paladin", "found by name and surname")
+	eq(ns.Get("Bob-Ledjoo").text, "other Bob", "the other Bob")
+	local lines = {}
+	GameTooltip.AddLine = function(_, t) lines[#lines + 1] = t end
+	GameTooltip.GetUnit = function() return "Bob", "mouseover" end
+	MOCK.tooltipCalls[Enum.TooltipDataType.Unit](GameTooltip, { guid = "Player-6946-0A0B0C0D" })
+	local plain = lines[2] and lines[2]:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
+	eq(plain, "Note  nice paladin", "tooltip shows this Bob's note")
+	eq(guidCalls, 0, "a readable unit never asks its GUID")
+	MOCK.units.mouseover = nil
+	MOCK.secretsOn = true
+	GetNormalizedRealmName, GetRealmName, GetRealmID, GetPlayerInfoByGUID = norm, name, id, byGUID
+	db.notes = savedNotes
+end)
+
 step("no errors reported", function()
 	check(#MOCK.errors == 0, "errors: " .. table.concat(MOCK.errors, "\n"))
 end)

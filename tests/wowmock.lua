@@ -448,7 +448,8 @@ MOCK.SetGroup(1, false)
 
 UnitExists = function(u) return U(u) ~= nil end
 UnitGUID = function(u) local d = U(u); return d and ("Player-1-" .. d.name) end
-UnitName = function(u) local d = U(u); if d then return S(d.name), nil end end
+-- WoW Forever: the second value is the character's surname (regional unique names), never a realm
+UnitName = function(u) local d = U(u); if d then return S(d.name), d.surname and S(d.surname) or nil end end
 UnitFullName = function(u) local d = U(u); if d then return d.name, "MockRealm" end end
 GetUnitName = function(u) local d = U(u); return d and S(d.name) end
 UnitClass = function(u) local d = U(u); if d then return d.class, d.class, 1 end end
